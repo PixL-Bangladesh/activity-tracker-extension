@@ -267,14 +267,29 @@ export function SessionList() {
             recorderVersion: 'imported',
           }, session.events);
         });
+        
+        // Wait for all sessions to be imported
         void Promise.all(promises).then(() => {
-          void getAllSessions().then((sessionsData) => {
-            // Cast the sessions to include events property
-            setSessions(sessionsData as unknown as Session[]);
-            toast({
-              title: 'Sessions imported',
-              description: `${promises.length} sessions have been imported.`,
-            });
+          // Refresh the sessions list
+          return getAllSessions();
+        }).then((sessionsData) => {
+          // Update the state with the new sessions
+          setSessions(sessionsData as unknown as Session[]);
+          
+          // Force a re-render of the table
+          table.reset();
+          
+          // Show success message
+          toast({
+            title: 'Sessions imported',
+            description: `${promises.length} sessions have been imported.`,
+          });
+        }).catch(error => {
+          console.error("Import error:", error);
+          toast({
+            title: 'Import failed',
+            description: 'Failed to import sessions.',
+            variant: 'destructive',
           });
         });
       } catch (e) {

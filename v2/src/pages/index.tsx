@@ -1,27 +1,22 @@
 import React from 'react';
+import { ChakraProvider } from '@chakra-ui/react';
 import * as ReactDOM from 'react-dom/client';
 import { createHashRouter, RouterProvider } from 'react-router-dom';
-import { Providers } from '~/components/providers';
-import App from './App.tailwind';
-import '~/globals.css';
-import { Toaster } from '~/components/ui/toaster';
+import App from './App';
 
 const rootElement = document.getElementById('root');
 const router = createHashRouter([
   {
     path: '/*',
-    element: <>
-      <App />
-      <Toaster />
-    </>
+    element: <App />,
   },
 ]);
 
 rootElement &&
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <Providers>
+      <ChakraProvider>
         <RouterProvider router={router} />
-      </Providers>
+      </ChakraProvider>
     </React.StrictMode>,
   );

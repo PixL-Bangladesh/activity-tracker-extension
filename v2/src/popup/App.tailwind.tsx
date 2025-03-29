@@ -17,6 +17,7 @@ export function App() {
   const [errorMessage, setErrorMessage] = useState('');
   const [startTime, setStartTime] = useState(0);
   const [newSession, setNewSession] = useState<Session | null>(null);
+  const [connectionError, setConnectionError] = useState(false);
 
   useEffect(() => {
     const parseStatusData = (data: LocalData[LocalDataKey.recorderStatus]) => {
@@ -40,7 +41,53 @@ export function App() {
     channel.on(EventName.SessionUpdated, (data) => {
       setNewSession((data as { session: Session }).session);
     });
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (event.reason && typeof event.reason.message === 'string' &&
+          (event.reason.message.includes("Could not establish connection") || 
+           event.reason.message.includes("Receiving end does not exist"))) {
+        setConnectionError(true);
+      }
+    };
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
   }, []);
+
+  const safeEmit = async (eventName: EventName, data: unknown) => {
+    try {
+      await channel.emit(eventName, data);
+    } catch (error) {
+      if (error instanceof Error && 
+          (error.message.includes("Could not establish connection") || 
+           error.message.includes("Receiving end does not exist"))) {
+        setConnectionError(true);
+      }
+    }
+  };
+
+  const handleRecordingAction = (action: string) => {
+    try {
+      if (action === 'start' && status === RecorderStatus.IDLE) {
+        void safeEmit(EventName.StartButtonClicked, {})
+      } else if (action === 'stop') {
+        void safeEmit(EventName.StopButtonClicked, {})
+      } else if (action === 'pause' && status === RecorderStatus.RECORDING) {
+        void safeEmit(EventName.PauseButtonClicked, {})
+      } else if (action === 'resume') {
+        void safeEmit(EventName.ResumeButtonClicked, {})
+      }
+    } catch (error) {
+      if (error instanceof Error && 
+          (error.message.includes("Could not establish connection") || 
+           error.message.includes("Receiving end does not exist"))) {
+        setConnectionError(true);
+      }
+    }
+  };
 
   return (
     <div className="flex flex-col w-[300px] h-[300px] p-[5%]">
@@ -92,11 +139,7 @@ export function App() {
               ? 'Start Recording'
               : 'Stop Recording'
           }
-          onClick={() => {
-            if (status === RecorderStatus.IDLE)
-              void channel.emit(EventName.StartButtonClicked, {});
-            else void channel.emit(EventName.StopButtonClicked, {});
-          }}
+          onClick={() => handleRecordingAction(status === RecorderStatus.IDLE ? 'start' : 'stop')}
         >
           <div
             style={{
@@ -117,13 +160,7 @@ export function App() {
                 ? 'Pause Recording'
                 : 'Resume Recording'
             }
-            onClick={() => {
-              if (status === RecorderStatus.RECORDING) {
-                void channel.emit(EventName.PauseButtonClicked, {});
-              } else {
-                void channel.emit(EventName.ResumeButtonClicked, {});
-              }
-            }}
+            onClick={() => handleRecordingAction(status === RecorderStatus.RECORDING ? 'pause' : 'resume')}
           >
             <div
               style={{
@@ -177,6 +214,37 @@ export function App() {
           <p className="text-sm text-red-600">
             {errorMessage}
           </p>
+        </div>
+      )}
+
+      {connectionError && (
+        <div className="mt-2 p-4 rounded-md border border-red-200 bg-red-50">
+          <p className="text-sm text-red-600 mb-2">
+            Could not establish connection. The page may need to be refreshed.
+          </p>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="w-full text-red-600 border-red-200 hover:bg-red-100"
+            onClick={() => {
+              // Attempt to refresh the active tab
+              Browser.tabs.query({ active: true, currentWindow: true })
+                .then(tabs => {
+                  if (tabs[0]?.id) {
+                    return Browser.tabs.reload(tabs[0].id);
+                  }
+                })
+                .then(() => {
+                  setConnectionError(false);
+                })
+                .catch(() => {
+                  // If we can't reload the tab, at least reset the error state
+                  setConnectionError(false);
+                });
+            }}
+          >
+            Refresh Page
+          </Button>
         </div>
       )}
     </div>

@@ -48,7 +48,8 @@ export async function addSession(session: Session, events: eventWithTime[]) {
   const eventStore = await getEventStore();
   await eventStore.put(EventStoreName, { id: session.id, events });
   const store = await getSessionStore();
-  await store.add(SessionStoreName, session);
+  // Use put instead of add to handle cases where the session might already exist
+  await store.put(SessionStoreName, session);
 }
 
 export async function updateSession(
