@@ -10,7 +10,9 @@ import {
   Edit as EditIcon,
   Download,
   Trash,
-  Upload
+  Upload,
+  Play,
+  BarChart3,
 } from 'lucide-react';
 
 import {
@@ -45,6 +47,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+import { Link } from 'react-router-dom';
 
 // Extend the Session type to include events
 interface Session extends BaseSession {
@@ -180,6 +183,47 @@ export function SessionList() {
       columnHelper.accessor((row) => row.recorderVersion, {
         cell: (info) => info.getValue(),
         header: 'ScreenTrail Version',
+      }),
+      columnHelper.accessor((row) => row.id, {
+        id: 'actions',
+        cell: ({ row }) => {
+          const session = row.original;
+          return (
+            <div className="flex items-center gap-2">
+              <Link
+                to={`/player/${session.id}`}
+                className="rounded-md border border-gray-300 bg-white py-2 px-3 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                <Play className="h-4 w-4" />
+              </Link>
+              <Link
+                to={`/analytics/${session.id}`}
+                className="rounded-md border border-gray-300 bg-white py-2 px-3 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                <BarChart3 className="h-4 w-4" />
+              </Link>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  void deleteSessions([session.id]).then(() => {
+                    void getAllSessions().then((sessionsData) => {
+                      // Cast the sessions to include events property
+                      setSessions(sessionsData as unknown as Session[]);
+                      setRowSelection({});
+                      toast({
+                        title: 'Session deleted',
+                        description: `Session ${session.id} has been deleted.`,
+                      });
+                    });
+                  });
+                }}
+              >
+                <Trash className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        },
       }),
     ],
     [sessions],

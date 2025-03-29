@@ -84,3 +84,66 @@ export type EmitEventMessage = {
   message: MessageName.EmitEvent;
   event: eventWithTime;
 };
+
+// Add new tracking types
+export interface NetworkRequest {
+  type: 'xhr' | 'fetch';
+  url: string;
+  method: string;
+  startTime: number;
+  endTime?: number;
+  duration?: number;
+  status: string | number;
+  statusText?: string;
+  error?: string;
+  contentType?: string;
+  size?: number;
+}
+
+export interface EnvironmentMetadata {
+  userAgent: string;
+  language: string;
+  platform: string;
+  screenWidth: number;
+  screenHeight: number;
+  windowWidth: number;
+  windowHeight: number;
+  devicePixelRatio: number;
+  timestamp: number;
+}
+
+export interface MouseClickData {
+  x: number;
+  y: number;
+  target: string;
+  timestamp: number;
+  button: number;
+}
+
+export interface KeypressData {
+  key: string;
+  timestamp: number;
+  target: string;
+  isMetaKey: boolean;
+}
+
+export interface ConsoleLogData {
+  level: string;
+  message: string;
+  timestamp: number;
+}
+
+// Custom event types for our enhanced tracking
+export enum CustomEventType {
+  Network = 'network',
+  Metadata = 'metadata',
+  MouseClick = 'mouseClick',
+  Keypress = 'keypress',
+  ConsoleLog = 'consoleLog'
+}
+
+export interface CustomEvent {
+  type: CustomEventType;
+  data: NetworkRequest | EnvironmentMetadata | MouseClickData | KeypressData | ConsoleLogData;
+  timestamp: number;
+}
