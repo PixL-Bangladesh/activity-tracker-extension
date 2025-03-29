@@ -1,0 +1,184 @@
+import { useState, useEffect } from 'react';
+import Browser from 'webextension-polyfill';
+import { ListIcon, Settings, Pause, Play } from 'lucide-react';
+import Channel from '~/utils/channel';
+import { LocalDataKey, RecorderStatus, EventName } from '~/types';
+import type { LocalData, Session } from '~/types';
+
+import { CircleButton } from '~/components/ui/circle-button';
+import { Timer } from '~/components/ui/timer';
+import { Button } from '~/components/ui/button';
+
+const RECORD_BUTTON_SIZE = 3;
+const channel = new Channel();
+
+export function App() {
+  const [status, setStatus] = useState<RecorderStatus>(RecorderStatus.IDLE);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [startTime, setStartTime] = useState(0);
+  const [newSession, setNewSession] = useState<Session | null>(null);
+
+  useEffect(() => {
+    const parseStatusData = (data: LocalData[LocalDataKey.recorderStatus]) => {
+      const { status, startTimestamp, pausedTimestamp } = data;
+      setStatus(status);
+      if (startTimestamp && pausedTimestamp)
+        setStartTime(Date.now() - pausedTimestamp + startTimestamp);
+      else if (startTimestamp) setStartTime(startTimestamp);
+    };
+    void Browser.storage.local.get(LocalDataKey.recorderStatus).then((data) => {
+      if (!data || !data[LocalDataKey.recorderStatus]) return;
+      parseStatusData((data as LocalData)[LocalDataKey.recorderStatus]);
+    });
+    void Browser.storage.local.onChanged.addListener((changes) => {
+      if (!changes[LocalDataKey.recorderStatus]) return;
+      const data = changes[LocalDataKey.recorderStatus]
+        .newValue as LocalData[LocalDataKey.recorderStatus];
+      parseStatusData(data);
+      if (data.errorMessage) setErrorMessage(data.errorMessage);
+    });
+    channel.on(EventName.SessionUpdated, (data) => {
+      setNewSession((data as { session: Session }).session);
+    });
+  }, []);
+
+  return (
+    <div className="flex flex-col w-[300px] h-[300px] p-[5%]">
+      <div className="flex">
+        <p className="text-md font-bold">
+          ScreenTrail Recorder
+        </p>
+        <div className="flex-1"></div>
+        <div className="flex flex-row space-x-2">
+          <Button
+            onClick={() => {
+              void Browser.tabs.create({ url: '/pages/index.html#/' });
+            }}
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0"
+            title="Session List"
+          >
+            <ListIcon className="h-4 w-4" />
+            <span className="sr-only">Session List</span>
+          </Button>
+          <Button
+            onClick={() => {
+              void Browser.runtime.openOptionsPage();
+            }}
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0"
+            title="Settings"
+          >
+            <Settings className="h-4 w-4" />
+            <span className="sr-only">Settings</span>
+          </Button>
+        </div>
+      </div>
+
+      {status !== RecorderStatus.IDLE && startTime && (
+        <Timer
+          startTime={startTime}
+          ticking={status === RecorderStatus.RECORDING}
+        />
+      )}
+
+      <div className="flex justify-center gap-10 mt-5 mb-5">
+        <CircleButton
+          diameter={RECORD_BUTTON_SIZE}
+          title={
+            status === RecorderStatus.IDLE
+              ? 'Start Recording'
+              : 'Stop Recording'
+          }
+          onClick={() => {
+            if (status === RecorderStatus.IDLE)
+              void channel.emit(EventName.StartButtonClicked, {});
+            else void channel.emit(EventName.StopButtonClicked, {});
+          }}
+        >
+          <div
+            style={{
+              width: `${RECORD_BUTTON_SIZE}rem`,
+              height: `${RECORD_BUTTON_SIZE}rem`,
+              margin: 0,
+              backgroundColor: 'rgb(239, 68, 68)', // red-500
+              borderRadius: status === RecorderStatus.IDLE ? '9999px' : '0.375rem'
+            }}
+          />
+        </CircleButton>
+
+        {status !== RecorderStatus.IDLE && (
+          <CircleButton
+            diameter={RECORD_BUTTON_SIZE}
+            title={
+              status === RecorderStatus.RECORDING
+                ? 'Pause Recording'
+                : 'Resume Recording'
+            }
+            onClick={() => {
+              if (status === RecorderStatus.RECORDING) {
+                void channel.emit(EventName.PauseButtonClicked, {});
+              } else {
+                void channel.emit(EventName.ResumeButtonClicked, {});
+              }
+            }}
+          >
+            <div
+              style={{
+                width: `${RECORD_BUTTON_SIZE}rem`,
+                height: `${RECORD_BUTTON_SIZE}rem`,
+                borderRadius: '9999px',
+                margin: 0,
+                color: 'rgb(75, 85, 99)' // gray-600
+              }}
+            >
+              {[RecorderStatus.PAUSED, RecorderStatus.PausedSwitch].includes(
+                status,
+              ) && (
+                  <Play
+                    className="pl-2 w-full h-full"
+                  />
+                )}
+              {status === RecorderStatus.RECORDING && (
+                <Pause
+                  className="w-full h-full"
+                />
+              )}
+            </div>
+          </CircleButton>
+        )}
+      </div>
+
+      {newSession && (
+        <div className="flex flex-col mt-2 p-4 rounded-md border border-gray-200">
+          <p className="text-sm font-medium">
+            New session created
+          </p>
+          <Button
+            onClick={() => {
+              void Browser.tabs.create({
+                url: `/pages/index.html#/player/${newSession.id}`,
+              });
+              setNewSession(null);
+            }}
+            className="mt-2"
+            variant="outline"
+            size="sm"
+          >
+            View Session
+          </Button>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="mt-2 p-4 rounded-md border border-red-200 bg-red-50">
+          <p className="text-sm text-red-600">
+            {errorMessage}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}

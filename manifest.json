@@ -14,7 +14,8 @@
     "downloads",
     "tabCapture",
     "clipboardWrite",
-    "desktopCapture"
+    "desktopCapture",
+    "notifications"
   ],
   "host_permissions": [
     "<all_urls>"

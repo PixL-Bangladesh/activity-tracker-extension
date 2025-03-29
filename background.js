@@ -2,6 +2,8 @@
 let activeRecordingSessions = {};
 let currentSessionId = null;
 let eventCounter = 0;
+let mediaRecorder = null;
+let recordedChunks = [];
 
 // Initialize extension when installed
 chrome.runtime.onInstalled.addListener(() => {
@@ -81,12 +83,133 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         .catch(error => sendResponse({ success: false, error: error.message }));
       return true; // Keep the message channel open for async response
 
+    case 'startScreenRecording':
+      startScreenRecording()
+        .then(response => sendResponse(response))
+        .catch(error => sendResponse({ success: false, error: error.message }));
+      return true;
+
+    case 'stopScreenRecording':
+      stopScreenRecording()
+        .then(response => sendResponse(response))
+        .catch(error => sendResponse({ success: false, error: error.message }));
+      return true;
+
+    case "downloadEvents":
+      chrome.downloads.download({
+        url: 'data:application/json,' + JSON.stringify(request.events),
+        filename: 'events.json',
+        saveAs: true
+      }).then(() => {
+        sendResponse({ success: true });
+      }).catch(error => {
+        sendResponse({ success: false, error: error.message });
+      });
+      return true;
     default:
       sendResponse({ success: false, error: `Unknown action: ${request.action}` });
   }
 
   return true; // Keep the message channel open for async responses
 });
+
+// Start screen recording
+function startScreenRecording() {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (!tabs || tabs.length === 0) {
+        reject(new Error('No active tab found'));
+        return;
+      }
+
+      const activeTab = tabs[0];
+      console.log(activeTab);
+
+      chrome.desktopCapture.chooseDesktopMedia(
+        ['screen', 'window', 'tab'],
+        activeTab.id,
+        (streamId) => {
+          console.log('Selected stream ID:', streamId);
+          if (!streamId) {
+            reject(new Error('User cancelled screen recording'));
+            return;
+          }
+
+          navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+              mandatory: {
+                chromeMediaSource: 'desktop',
+                chromeMediaSourceId: streamId
+              }
+            }
+          }).then(stream => {
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+            mediaRecorder.ondataavailable = (event) => {
+              if (event.data.size > 0) {
+                recordedChunks.push(event.data);
+              }
+            };
+
+            mediaRecorder.onstop = () => {
+              const blob = new Blob(recordedChunks, { type: 'video/webm' });
+              const url = URL.createObjectURL(blob);
+
+              const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+              const filename = `screen-recording-${timestamp}.webm`;
+
+              chrome.downloads.download({
+                url: url,
+                filename: filename,
+                saveAs: true
+              });
+
+              recordedChunks = [];
+
+              chrome.notifications.create({
+                type: 'basic',
+                iconUrl: 'icons/icon48.png',
+                title: 'Screen Recording Complete',
+                message: 'Your screen recording has been saved.',
+                priority: 2
+              });
+            };
+
+            mediaRecorder.start(1000);
+
+            chrome.notifications.create({
+              type: 'basic',
+              iconUrl: 'icons/icon48.png',
+              title: 'Screen Recording Started',
+              message: 'Your screen is now being recorded. Click the button again to stop.',
+              priority: 2
+            });
+
+            resolve({ success: true });
+          }).catch(error => {
+            console.error('Media error:', error);
+            reject(error);
+          });
+        }
+      );
+    })
+  });
+}
+
+// Stop screen recording
+function stopScreenRecording() {
+  return new Promise((resolve, reject) => {
+    if (!mediaRecorder) {
+      reject(new Error('No active recording'));
+      return;
+    }
+
+    mediaRecorder.stop();
+    mediaRecorder = null;
+    resolve({ success: true });
+  });
+}
 
 // Start recording in all active tabs
 function startRecording(sessionId, settings) {
