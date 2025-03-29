@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Action Tracker Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        input, textarea {
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Action Tracker Test Page</h1>
+    <p>This page is designed to test various interactions for the Action Tracker extension.</p>
+
+    <div class="test-section">
+        <h2>Mouse Interactions</h2>
+        <button id="clickMe">Click Me</button>
+        <button id="rightClickMe">Right Click Me</button>
+        <div id="mouseTracker" style="height: 100px; background-color: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+            Move your mouse here
+        </div>
+        <div class="result" id="mouseResult">Results will appear here</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Keyboard Interactions</h2>
+        <input type="text" id="textInput" placeholder="Type something here">
+        <input type="password" id="passwordInput" placeholder="Type a password (should be masked)">
+        <textarea id="textArea" placeholder="Type multiple lines here"></textarea>
+        <div class="result" id="keyboardResult">Results will appear here</div>
+    </div>
+
+    <div class="test-section">
+        <h2>DOM Changes</h2>
+        <button id="addElement">Add Element</button>
+        <button id="removeElement">Remove Element</button>
+        <button id="modifyAttribute">Modify Attribute</button>
+        <div id="domContainer" style="min-height: 50px; border: 1px dashed #ccc; padding: 10px; margin-top: 10px;">
+            DOM elements will appear here
+        </div>
+        <div class="result" id="domResult">Results will appear here</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Console Logs</h2>
+        <button id="logInfo">Log Info</button>
+        <button id="logWarning">Log Warning</button>
+        <button id="logError">Log Error</button>
+        <div class="result" id="consoleResult">Check browser console for results</div>
+    </div>
+
+    <script>
+        // Mouse interaction handlers
+        document.getElementById('clickMe').addEventListener('click', function() {
+            document.getElementById('mouseResult').textContent = 'Button clicked at ' + new Date().toLocaleTimeString();
+        });
+
+        document.getElementById('rightClickMe').addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            document.getElementById('mouseResult').textContent = 'Right-clicked at ' + new Date().toLocaleTimeString();
+        });
+
+        const mouseTracker = document.getElementById('mouseTracker');
+        mouseTracker.addEventListener('mousemove', function(e) {
+            const rect = mouseTracker.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            mouseTracker.textContent = `Mouse position: ${x.toFixed(0)}, ${y.toFixed(0)}`;
+        });
+
+        // Keyboard interaction handlers
+        document.getElementById('textInput').addEventListener('input', function(e) {
+            document.getElementById('keyboardResult').textContent = 'Text input: ' + e.target.value;
+        });
+
+        document.getElementById('passwordInput').addEventListener('input', function() {
+            document.getElementById('keyboardResult').textContent = 'Password changed';
+        });
+
+        document.getElementById('textArea').addEventListener('input', function(e) {
+            document.getElementById('keyboardResult').textContent = 'Text area: ' + e.target.value.substring(0, 30) + 
+                (e.target.value.length > 30 ? '...' : '');
+        });
+
+        // DOM change handlers
+        let elementCount = 0;
+        
+        document.getElementById('addElement').addEventListener('click', function() {
+            elementCount++;
+            const newElement = document.createElement('div');
+            newElement.className = 'added-element';
+            newElement.textContent = `Element ${elementCount} added at ${new Date().toLocaleTimeString()}`;
+            newElement.style.padding = '5px';
+            newElement.style.margin = '5px 0';
+            newElement.style.backgroundColor = '#e0f7fa';
+            document.getElementById('domContainer').appendChild(newElement);
+            document.getElementById('domResult').textContent = `Added element ${elementCount}`;
+        });
+
+        document.getElementById('removeElement').addEventListener('click', function() {
+            const elements = document.getElementsByClassName('added-element');
+            if (elements.length > 0) {
+                const removed = elements[elements.length - 1];
+                removed.parentNode.removeChild(removed);
+                document.getElementById('domResult').textContent = `Removed element ${elementCount}`;
+                elementCount = Math.max(0, elementCount - 1);
+            } else {
+                document.getElementById('domResult').textContent = 'No elements to remove';
+            }
+        });
+
+        document.getElementById('modifyAttribute').addEventListener('click', function() {
+            const container = document.getElementById('domContainer');
+            const currentBg = container.style.backgroundColor || 'transparent';
+            const newBg = currentBg === 'transparent' || currentBg === '' ? '#f9fbe7' : 'transparent';
+            container.style.backgroundColor = newBg;
+            document.getElementById('domResult').textContent = `Modified background to ${newBg}`;
+        });
+
+        // Console log handlers
+        document.getElementById('logInfo').addEventListener('click', function() {
+            console.info('Info message logged at', new Date().toLocaleTimeString());
+            document.getElementById('consoleResult').textContent = 'Info logged to console';
+        });
+
+        document.getElementById('logWarning').addEventListener('click', function() {
+            console.warn('Warning message logged at', new Date().toLocaleTimeString());
+            document.getElementById('consoleResult').textContent = 'Warning logged to console';
+        });
+
+        document.getElementById('logError').addEventListener('click', function() {
+            console.error('Error message logged at', new Date().toLocaleTimeString());
+            document.getElementById('consoleResult').textContent = 'Error logged to console';
+        });
+    </script>
+</body>
+</html>
