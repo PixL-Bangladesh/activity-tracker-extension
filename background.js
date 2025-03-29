@@ -456,120 +456,54 @@ function saveSessionMetadata(sessionId) {
 
 // Save complete session data
 function saveSessionData(sessionId, sessionData) {
-  if (!sessionId || !sessionData) return;
-
-  chrome.storage.local.set({
-    [`session_${sessionId}`]: {
-      metadata: sessionData.metadata,
-      startTime: sessionData.startTime,
-      endTime: sessionData.endTime,
-      duration: sessionData.duration,
-      settings: sessionData.settings,
-      tabs: sessionData.tabs,
-      events: sessionData.events.slice(-1000) // Keep last 1000 events
-    }
-  }, () => {
-    if (chrome.runtime.lastError) {
-    } else {
-    }
+  // Clear previous session data before saving new one
+  chrome.storage.local.remove(sessionId, function () {
+    chrome.storage.local.set({ [sessionId]: sessionData }, function () {
+      console.log(`Session ${sessionId} data saved`);
+    });
   });
 }
 
 // Export all session data
 function exportData() {
   return new Promise((resolve, reject) => {
-    try {
-      if (currentSessionId || Object.keys(activeRecordingSessions).length > 0) {
-        const sessionId = currentSessionId || Object.keys(activeRecordingSessions)[0];
-        const sessionData = activeRecordingSessions[sessionId];
-
-        if (sessionData) {
-          exportActiveSession(sessionId, sessionData);
-          return;
-        }
+    chrome.storage.local.get(null, function (items) {
+      if (chrome.runtime.lastError) {
+        reject(chrome.runtime.lastError);
+        return;
       }
 
-      chrome.storage.local.get(null, (items) => {
+      // Find the most recent session
+      const sessions = Object.keys(items)
+        .filter(key => key.startsWith('session_'))
+        .sort((a, b) => b.localeCompare(a));
+
+      if (sessions.length === 0) {
+        reject(new Error('No session data found'));
+        return;
+      }
+
+      const mostRecentSession = sessions[0];
+      const sessionData = items[mostRecentSession];
+
+      // Create JSON file
+      const jsonData = JSON.stringify(sessionData, null, 2);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `action-tracker-session_${timestamp}.json`;
+
+      // Save file
+      chrome.downloads.download({
+        url: 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonData),
+        filename: filename,
+        saveAs: true
+      }, function (downloadId) {
         if (chrome.runtime.lastError) {
-          const errorMsg = 'Error accessing storage: ' + chrome.runtime.lastError.message;
-          reject(new Error(errorMsg));
-          return;
-        }
-
-        let sessionData = null;
-        let sessionId = null;
-
-        const eventKeys = Object.keys(items).filter(key => key.startsWith('events_'));
-        if (eventKeys.length > 0) {
-          eventKeys.sort();
-          const latestEventKey = eventKeys[eventKeys.length - 1];
-          sessionId = latestEventKey.replace('events_', '');
-
-          const events = items[latestEventKey];
-          const metadataKey = `metadata_${sessionId}`;
-          const metadata = items[metadataKey] || {};
-
-          sessionData = {
-            events: events || [],
-            metadata: metadata,
-            startTime: metadata.startTime || Date.now(),
-            endTime: metadata.endTime || Date.now(),
-            settings: metadata.settings || {},
-            tabs: metadata.tabs || {}
-          };
-
-          exportActiveSession(sessionId, sessionData);
+          reject(chrome.runtime.lastError);
         } else {
-          const errorMsg = 'No recording data found in storage';
-          reject(new Error(errorMsg));
+          resolve({ success: true, path: filename });
         }
       });
-    } catch (error) {
-      const errorMsg = 'Error exporting data: ' + error.message;
-      reject(new Error(errorMsg));
-    }
-
-    async function exportActiveSession(sessionId, sessionData) {
-      try {
-        // Capture screenshots of key elements
-        const screenshots = {};
-
-        // Example: Capture specific elements
-        try {
-          const screenshotData = await captureTabScreenshot(sessionId);
-          screenshots['fullPage'] = screenshotData;
-        } catch (error) {
-          // Handle error
-        }
-
-        // Add screenshots to export data
-        const exportData = {
-          ...sessionData,
-          screenshots: screenshots
-        };
-
-        const jsonData = JSON.stringify(exportData, null, 2);
-
-        const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\..+/, '');
-        const filename = `action-tracker-${sessionId}-${timestamp}.json`;
-
-        const dataUrl = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonData);
-
-        chrome.downloads.download({
-          url: dataUrl,
-          filename: filename,
-          saveAs: true
-        }, (downloadId) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error('Error downloading file: ' + chrome.runtime.lastError.message));
-          } else {
-            resolve(filename);
-          }
-        });
-      } catch (error) {
-        reject(new Error('Error preparing export: ' + error.message));
-      }
-    }
+    });
   });
 }
 

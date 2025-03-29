@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const sessionDurationElement = document.getElementById('session-duration');
   const eventsCountElement = document.getElementById('events-count');
   const screenshotResultElement = document.getElementById('screenshot-result');
+  const recordScreenButton = document.getElementById('record-screen');
   
   // Settings checkboxes
   const captureMouse = document.getElementById('capture-mouse');
