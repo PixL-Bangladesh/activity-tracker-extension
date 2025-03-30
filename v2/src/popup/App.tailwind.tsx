@@ -44,8 +44,8 @@ export function App() {
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       if (event.reason && typeof event.reason.message === 'string' &&
-          (event.reason.message.includes("Could not establish connection") || 
-           event.reason.message.includes("Receiving end does not exist"))) {
+        (event.reason.message.includes("Could not establish connection") ||
+          event.reason.message.includes("Receiving end does not exist"))) {
         setConnectionError(true);
       }
     };
@@ -61,9 +61,9 @@ export function App() {
     try {
       await channel.emit(eventName, data);
     } catch (error) {
-      if (error instanceof Error && 
-          (error.message.includes("Could not establish connection") || 
-           error.message.includes("Receiving end does not exist"))) {
+      if (error instanceof Error &&
+        (error.message.includes("Could not establish connection") ||
+          error.message.includes("Receiving end does not exist"))) {
         setConnectionError(true);
       }
     }
@@ -81,9 +81,9 @@ export function App() {
         void safeEmit(EventName.ResumeButtonClicked, {})
       }
     } catch (error) {
-      if (error instanceof Error && 
-          (error.message.includes("Could not establish connection") || 
-           error.message.includes("Receiving end does not exist"))) {
+      if (error instanceof Error &&
+        (error.message.includes("Could not establish connection") ||
+          error.message.includes("Receiving end does not exist"))) {
         setConnectionError(true);
       }
     }
@@ -222,9 +222,9 @@ export function App() {
           <p className="text-sm text-red-600 mb-2">
             Could not establish connection. The page may need to be refreshed.
           </p>
-          <Button 
-            size="sm" 
-            variant="outline" 
+          <Button
+            size="sm"
+            variant="outline"
             className="w-full text-red-600 border-red-200 hover:bg-red-100"
             onClick={() => {
               // Attempt to refresh the active tab

@@ -2,7 +2,7 @@ import { record } from 'rrweb';
 import type { recordOptions } from 'rrweb';
 import type { eventWithTime } from '@rrweb/types';
 import { MessageName, type RecordStartedMessage } from '~/types';
-import type { NetworkRequest, EnvironmentMetadata, CustomEvent } from '~/types';
+import type { NetworkRequest, EnvironmentMetadata } from '~/types';
 import { CustomEventType } from '~/types';
 import { isInCrossOriginIFrame } from '~/utils';
 import { getRecordConsolePlugin } from '@rrweb/rrweb-plugin-console-record';
@@ -37,7 +37,7 @@ function createCustomEvent(type: CustomEventType, data: any): eventWithTime {
 
 function setupNetworkTracking() {
   const originalFetch = window.fetch;
-  window.fetch = function (...args) {
+  window.fetch = async function (...args) {
     const startTime = Date.now();
     const urlArg = args[0];
     const url = typeof urlArg === 'string' ? urlArg : urlArg instanceof URL ? urlArg.toString() : urlArg.url;
@@ -53,31 +53,29 @@ function setupNetworkTracking() {
 
     networkRequests.push(request);
 
-    return originalFetch.apply(this, args)
-      .then(response => {
-        request.endTime = Date.now();
-        request.duration = request.endTime - request.startTime;
-        request.status = response.status;
-        request.statusText = response.statusText;
+    try {
+      const response = await originalFetch.apply(this, args);
+      request.endTime = Date.now();
+      request.duration = request.endTime - request.startTime;
+      request.status = response.status;
+      request.statusText = response.statusText;
 
-        if (emitEvent) {
-          emitEvent(createCustomEvent(CustomEventType.Network, request));
-        }
+      if (emitEvent) {
+        emitEvent(createCustomEvent(CustomEventType.Network, request));
+      }
+      return response;
+    } catch (error: unknown) {
+      request.endTime = Date.now();
+      request.duration = request.endTime - request.startTime;
+      request.status = 'error';
+      request.error = error instanceof Error ? error.message : String(error);
 
-        return response;
-      })
-      .catch(error => {
-        request.endTime = Date.now();
-        request.duration = request.endTime - request.startTime;
-        request.status = 'error';
-        request.error = error.message;
+      if (emitEvent) {
+        emitEvent(createCustomEvent(CustomEventType.Network, request));
+      }
 
-        if (emitEvent) {
-          emitEvent(createCustomEvent(CustomEventType.Network, request));
-        }
-
-        throw error;
-      });
+      throw error;
+    }
   };
 
   const originalXhrOpen = XMLHttpRequest.prototype.open;
