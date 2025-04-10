@@ -118,6 +118,7 @@ export interface MouseClickData {
   target: string;
   timestamp: number;
   button: number;
+  domSnapshot?: any; // DOM snapshot at the time of click
 }
 
 export interface KeypressData {
@@ -125,6 +126,12 @@ export interface KeypressData {
   timestamp: number;
   target: string;
   isMetaKey: boolean;
+}
+
+export interface InputChangeData {
+  value: string;
+  element: string;
+  timestamp: number;
 }
 
 export interface ConsoleLogData {
@@ -139,11 +146,13 @@ export enum CustomEventType {
   Metadata = 'metadata',
   MouseClick = 'mouseClick',
   Keypress = 'keypress',
-  ConsoleLog = 'consoleLog'
+  ConsoleLog = 'consoleLog',
+  InputChange = 'inputChange',
+  DOMSnapshot = 'domSnapshot'
 }
 
 export interface CustomEvent {
   type: CustomEventType;
-  data: NetworkRequest | EnvironmentMetadata | MouseClickData | KeypressData | ConsoleLogData;
+  data: NetworkRequest | EnvironmentMetadata | MouseClickData | KeypressData | ConsoleLogData | InputChangeData;
   timestamp: number;
 }

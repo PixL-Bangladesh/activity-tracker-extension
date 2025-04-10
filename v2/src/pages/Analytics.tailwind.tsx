@@ -22,6 +22,8 @@ import {
   DialogTitle,
   DialogTrigger
 } from '~/components/ui/dialog';
+// Import Scribe-like flow controller
+import ScribeFlowController from '~/components/ScribeFlowController';
 
 // Define colors for charts
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
@@ -135,6 +137,8 @@ const Analytics: React.FC = () => {
 
   // Advanced analytics
   const [advancedAnalytics, setAdvancedAnalytics] = useState<AdvancedAnalytics | null>(null);
+
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -1513,6 +1517,15 @@ const Analytics: React.FC = () => {
               </div>
             </TabsContent>
 
+            {/* Scribe Flow Tab */}
+            <TabsContent value="scribe">
+              <ScribeFlowController
+                sessionId={id || ''}
+                events={allEvents}
+                loading={loading}
+              />
+            </TabsContent>
+            
             {/* Timeline Tab */}
             <TabsContent value="timeline">
               <Card>
