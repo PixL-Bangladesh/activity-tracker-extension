@@ -12,7 +12,7 @@ export default function WelcomePage() {
 
   // Set default theme to dark on initial load
   useEffect(() => {
-    setTheme("dark");
+    setTheme("system");
   }, [setTheme]);
 
   return (
@@ -39,11 +39,11 @@ export default function WelcomePage() {
           <Button
             onClick={() => router.push("/dashboard")}
             size="lg"
-            className="rounded-full w-16 h-16 p-0 bg-primary hover:bg-primary/90"
+            className="rounded-full w-24 h-24 p-0 bg-primary hover:bg-primary/90 cursor-pointer"
           >
             <motion.span
               animate={{
-                scale: [1, 1.1, 1],
+                scale: [1, 1.2, 1],
               }}
               transition={{
                 repeat: Number.POSITIVE_INFINITY,

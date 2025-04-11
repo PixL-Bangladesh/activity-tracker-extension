@@ -25,24 +25,30 @@ export default function Dashboard() {
     (acc, category) => acc + category.tasks.length,
     0
   );
+
   const completedTasks = Object.values(taskStatuses).filter(
     (status) => status === "completed"
   ).length;
+
   const inProgressTasks = Object.values(taskStatuses).filter(
     (status) => status === "in-progress"
   ).length;
+
   const completionPercentage =
     totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   // Calculate category statistics
   const categoryStats = taskCategories.map((category) => {
     const totalCategoryTasks = category.tasks.length;
+
     const completedCategoryTasks = category.tasks.filter(
       (task) => taskStatuses[task.id] === "completed"
     ).length;
+
     const inProgressCategoryTasks = category.tasks.filter(
       (task) => taskStatuses[task.id] === "in-progress"
     ).length;
+
     const completionPercentage =
       totalCategoryTasks > 0
         ? Math.round((completedCategoryTasks / totalCategoryTasks) * 100)
@@ -66,7 +72,7 @@ export default function Dashboard() {
     <>
       <Sidebar />
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-background">
-        <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="border-b border-border/40 bg-card backdrop-blur supports-[backdrop-filter]:bg-card/60">
           <div className="flex h-14 items-center px-4 lg:px-8">
             <h1 className="text-xl font-semibold">Dashboard</h1>
             <div className="ml-auto flex items-center gap-4">
@@ -79,58 +85,60 @@ export default function Dashboard() {
         </header>
 
         <main className="flex-1 overflow-auto p-4 lg:p-6">
-          <Alert className="mb-6">
-            <FileWarning className="h-4 w-4" />
-            <AlertDescription>
-              ⚠️ Do NOT clear your browser cache—your progress is stored
-              locally.
+          <Alert className="mb-6 bg-warning">
+            <FileWarning className="h-4 w-4" color="red" />
+            <AlertDescription className="text-background font-bold">
+              Do NOT clear your browser cache—your progress is stored locally.
             </AlertDescription>
           </Alert>
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+            <Card className="bg-chart-1">
+              <CardHeader className="pb-0">
+                <CardTitle className="text-sm font-medium text-foreground">
                   Total Tasks
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalTasks}</div>
+                <div className="text-3xl font-bold">{totalTasks}</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+
+            <Card className="bg-chart-2">
+              <CardHeader className="pb-0">
+                <CardTitle className="text-sm font-medium text-foreground">
                   Completed
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-500">
+                <div className="text-3xl font-bold text-foreground">
                   {completedTasks}
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+
+            <Card className="bg-chart-3">
+              <CardHeader className="pb-0">
+                <CardTitle className="text-sm font-medium text-foreground">
                   In Progress
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-amber-500">
+                <div className="text-3xl font-bold text-foreground">
                   {inProgressTasks}
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+
+            <Card className="bg-chart-4">
+              <CardHeader className="pb-0">
+                <CardTitle className="text-sm font-medium text-foreground">
                   Completion Rate
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-3xl font-bold">
                   {completionPercentage}%
                 </div>
               </CardContent>
@@ -145,8 +153,10 @@ export default function Dashboard() {
                 key={category.id}
                 className={
                   category.percentage === 100
-                    ? "border-green-500/30 bg-green-500/5"
-                    : ""
+                    ? "border-green-500/30 bg-green-500/10"
+                    : category.percentage >= 50
+                    ? "border-warning/50 bg-warning/20"
+                    : "border-destructive/10 bg-destructive/10"
                 }
               >
                 <CardHeader className="pb-2">
@@ -182,7 +192,7 @@ export default function Dashboard() {
                       <div className="text-sm font-medium">
                         {category.percentage}% complete
                       </div>
-                      <Link href="/tasks">
+                      <Link href={`/tasks?category=${category.id}`}>
                         <Button variant="ghost" size="sm" className="h-8 gap-1">
                           <span>View Tasks</span>
                           <ArrowRight className="h-4 w-4" />

@@ -23,12 +23,17 @@ import { CheckCircle, Clock, ExternalLink } from "lucide-react";
 import type { TaskCategory, Task } from "@/lib/task-data";
 import { type TaskStatus, useTaskStatus } from "@/contexts/task-status-context";
 import { TaskAlertDialog } from "@/components/task-alert-dialog";
+import { cn } from "@/lib/utils";
 
 interface TaskCategoryPanelProps {
   category: TaskCategory;
+  defaultOpen?: boolean;
 }
 
-export function TaskCategoryPanel({ category }: TaskCategoryPanelProps) {
+export function TaskCategoryPanel({
+  category,
+  defaultOpen,
+}: TaskCategoryPanelProps) {
   const { taskStatuses, updateTaskStatus } = useTaskStatus();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [alertOpen, setAlertOpen] = useState(false);
@@ -58,18 +63,29 @@ export function TaskCategoryPanel({ category }: TaskCategoryPanelProps) {
   const completedCount = category.tasks.filter(
     (task) => taskStatuses[task.id] === "completed"
   ).length;
+
   const inProgressCount = category.tasks.filter(
     (task) => taskStatuses[task.id] === "in-progress"
   ).length;
 
   return (
     <>
-      <Accordion type="single" collapsible className="w-full">
+      <Accordion
+        type="single"
+        collapsible
+        className={`w-full ${defaultOpen ? "border-b" : "border-b-0"}`}
+        defaultValue={defaultOpen ? category.id : undefined}
+      >
         <AccordionItem
           value={category.id}
           className="border rounded-lg overflow-hidden"
         >
-          <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-accent/50">
+          <AccordionTrigger
+            className={cn(
+              "px-4 py-3 hover:no-underline hover:bg-accent/50",
+              completedCount === category.tasks.length ? "bg-green-500/10" : ""
+            )}
+          >
             <div className="flex justify-between items-center w-full">
               <span className="text-lg font-medium">{category.name}</span>
               <div className="flex items-center gap-2">
@@ -94,14 +110,14 @@ export function TaskCategoryPanel({ category }: TaskCategoryPanelProps) {
           </AccordionTrigger>
           <AccordionContent>
             <div className="p-4">
-              <Table>
+              <Table className="md:table-fixed">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Task Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Average Duration</TableHead>
-                    <TableHead>Website</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
+                    <TableHead className="w-[50%]">Task Name</TableHead>
+                    <TableHead className="w-[15%]">Status</TableHead>
+                    <TableHead className="w-[20%]">Average Duration</TableHead>
+                    <TableHead className="w-[20%]">Website</TableHead>
+                    <TableHead className="w-[15%]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -115,7 +131,9 @@ export function TaskCategoryPanel({ category }: TaskCategoryPanelProps) {
                       }`}
                       onClick={() => handleRowClick(task)}
                     >
-                      <TableCell>{task.label}</TableCell>
+                      <TableCell className="whitespace-normal break-words line-clamp-2">
+                        {task.label}
+                      </TableCell>
                       <TableCell>
                         {getStatusBadge(taskStatuses[task.id])}
                       </TableCell>
@@ -160,6 +178,11 @@ export function TaskCategoryPanel({ category }: TaskCategoryPanelProps) {
         task={selectedTask}
         open={alertOpen}
         onOpenChange={setAlertOpen}
+        completionStatus={
+          selectedTask?.id
+            ? taskStatuses[selectedTask.id] === "completed"
+            : false
+        }
       />
     </>
   );

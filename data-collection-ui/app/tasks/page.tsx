@@ -9,11 +9,14 @@ import { Search } from "lucide-react";
 import { TaskCategoryPanel } from "@/components/task-category-panel";
 import { taskCategories } from "@/lib/task-data";
 import { useTaskStatus } from "@/contexts/task-status-context";
+import { useSearchParams } from "next/navigation";
 
 export default function TasksPage() {
   const { resetAllStatuses } = useTaskStatus();
   const [searchQuery, setSearchQuery] = useState("");
   const [mounted, setMounted] = useState(false);
+  const searchParams = useSearchParams();
+  const categoryParam = searchParams.get("category");
 
   // Ensure we only render after hydration to avoid hydration mismatch
   useEffect(() => {
@@ -62,7 +65,11 @@ export default function TasksPage() {
         <main className="flex-1 overflow-auto p-4 lg:p-6">
           <div className="space-y-4">
             {filteredCategories.map((category) => (
-              <TaskCategoryPanel key={category.id} category={category} />
+              <TaskCategoryPanel
+                key={category.id}
+                category={category}
+                defaultOpen={categoryParam === category.id}
+              />
             ))}
           </div>
         </main>

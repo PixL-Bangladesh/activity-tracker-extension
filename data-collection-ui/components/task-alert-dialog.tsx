@@ -12,19 +12,23 @@ import {
 import type { Task } from "@/lib/task-data";
 import { useTaskStatus } from "@/contexts/task-status-context";
 import { InfoIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface TaskAlertDialogProps {
   task: Task | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  completionStatus: boolean;
 }
 
 export function TaskAlertDialog({
   task,
   open,
   onOpenChange,
+  completionStatus,
 }: TaskAlertDialogProps) {
   const { updateTaskStatus } = useTaskStatus();
+  const router = useRouter();
 
   const handleProceed = () => {
     if (task) {
@@ -34,6 +38,16 @@ export function TaskAlertDialog({
     }
   };
 
+  const handleViewRecording = () => {
+    if (task) {
+      updateTaskStatus(task.id, "completed");
+      onOpenChange(false);
+
+      setTimeout(() => {
+        router.push(`/recordings?taskId=${task.id}`);
+      }, 100);
+    }
+  };
   if (!task) return null;
 
   return (
@@ -44,14 +58,14 @@ export function TaskAlertDialog({
             <InfoIcon className="h-5 w-5 text-amber-500" />
             Task Recording Guidelines
           </AlertDialogTitle>
-          <AlertDialogDescription className="text-base text-foreground">
-            <p className="font-medium mb-2">{task.label}</p>
-            <p className="text-sm text-muted-foreground mb-1">
+          <AlertDialogDescription className="text-base text-foreground flex flex-col">
+            <span className="font-medium mb-2">{task.label}</span>
+            <span className="text-sm text-muted-foreground mb-1">
               Website: {task.website}
-            </p>
-            <p className="text-sm text-muted-foreground mb-4">
+            </span>
+            <span className="text-sm text-muted-foreground mb-4">
               Average Duration: {task.averageDuration}
-            </p>
+            </span>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-3 text-sm">
@@ -90,9 +104,16 @@ export function TaskAlertDialog({
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleProceed}>
-            Proceed to Website
-          </AlertDialogAction>
+
+          {completionStatus ? (
+            <AlertDialogAction onClick={handleViewRecording}>
+              View Recording
+            </AlertDialogAction>
+          ) : (
+            <AlertDialogAction onClick={handleProceed}>
+              Proceed to Website
+            </AlertDialogAction>
+          )}
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
