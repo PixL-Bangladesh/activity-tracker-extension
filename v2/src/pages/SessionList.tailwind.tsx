@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { nanoid } from 'nanoid';
-import { useNavigate } from 'react-router-dom';
-import type { eventWithTime } from 'rrweb';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { nanoid } from "nanoid";
+import { useNavigate } from "react-router-dom";
+import type { eventWithTime } from "rrweb";
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,7 +13,7 @@ import {
   Upload,
   Play,
   BarChart3,
-} from 'lucide-react';
+} from "lucide-react";
 
 import {
   createColumnHelper,
@@ -23,17 +23,17 @@ import {
   type SortingState,
   getSortedRowModel,
   type PaginationState,
-} from '@tanstack/react-table';
+} from "@tanstack/react-table";
 
-import { type Session as BaseSession, EventName } from '~/types';
-import Channel from '~/utils/channel';
+import { type Session as BaseSession, EventName } from "~/types";
+import Channel from "~/utils/channel";
 import {
   deleteSessions,
   getAllSessions,
   downloadSessions,
   addSession,
   updateSession,
-} from '~/utils/storage';
+} from "~/utils/storage";
 
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -47,7 +47,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { Link } from 'react-router-dom';
+import { Link } from "react-router-dom";
 
 // Extend the Session type to include events
 interface Session extends BaseSession {
@@ -64,7 +64,7 @@ export function SessionList() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sorting, setSorting] = useState<SortingState>([
     {
-      id: 'createTimestamp',
+      id: "createTimestamp",
       desc: true,
     },
   ]);
@@ -84,7 +84,7 @@ export function SessionList() {
     return {
       rows: sessions.slice(
         options.pageIndex * options.pageSize,
-        (options.pageIndex + 1) * options.pageSize,
+        (options.pageIndex + 1) * options.pageSize
       ),
       pageCount: Math.ceil(sessions.length / options.pageSize),
     };
@@ -95,13 +95,13 @@ export function SessionList() {
       pageIndex,
       pageSize,
     }),
-    [pageIndex, pageSize],
+    [pageIndex, pageSize]
   );
 
   const columns = useMemo(
     () => [
       columnHelper.display({
-        id: 'select',
+        id: "select",
         header: ({ table }) => (
           <Checkbox
             checked={table.getIsAllRowsSelected()}
@@ -141,7 +141,7 @@ export function SessionList() {
                     className="h-8 w-full"
                     onBlur={handleSave}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === "Enter") {
                         handleSave();
                       }
                     }}
@@ -153,6 +153,11 @@ export function SessionList() {
                   <span
                     className="cursor-pointer"
                     onClick={() => navigate(`/player/${info.row.original.id}`)}
+                    onKeyUp={(e) => {
+                      if (e.key === "Enter") {
+                        navigate(`/player/${info.row.original.id}`);
+                      }
+                    }}
                   >
                     {value}
                   </span>
@@ -170,22 +175,22 @@ export function SessionList() {
             </div>
           );
         },
-        header: 'Name',
+        header: "Name",
       }),
       columnHelper.accessor((row) => row.createTimestamp, {
         cell: (info) => new Date(info.getValue()).toLocaleString(),
-        header: 'Created At',
+        header: "Created At",
       }),
       columnHelper.accessor((row) => row.events?.length || 0, {
         cell: (info) => info.getValue(),
-        header: 'Events',
+        header: "Events",
       }),
       columnHelper.accessor((row) => row.recorderVersion, {
         cell: (info) => info.getValue(),
-        header: 'ScreenTrail Version',
+        header: "ScreenTrail Version",
       }),
       columnHelper.accessor((row) => row.id, {
-        id: 'actions',
+        id: "actions",
         cell: ({ row }) => {
           const session = row.original;
           return (
@@ -212,7 +217,7 @@ export function SessionList() {
                       setSessions(sessionsData as unknown as Session[]);
                       setRowSelection({});
                       toast({
-                        title: 'Session deleted',
+                        title: "Session deleted",
                         description: `Session ${session.id} has been deleted.`,
                       });
                     });
@@ -226,7 +231,7 @@ export function SessionList() {
         },
       }),
     ],
-    [sessions],
+    [sessions]
   );
 
   const { rows, pageCount } = fetchData(fetchDataOptions);
@@ -271,7 +276,7 @@ export function SessionList() {
         setSessions(sessionsData as unknown as Session[]);
         setRowSelection({});
         toast({
-          title: 'Sessions deleted',
+          title: "Sessions deleted",
           description: `${selectedIds.length} sessions have been deleted.`,
         });
       });
@@ -296,56 +301,73 @@ export function SessionList() {
       try {
         const result = e.target?.result;
         if (!result) return;
-        const parsedSessions = JSON.parse(result as string) as {
-          id: string;
-          name: string;
-          events: eventWithTime[];
-        }[];
-        const promises = parsedSessions.map((session) => {
-          return addSession({
-            ...session,
-            id: nanoid(),
-            createTimestamp: Date.now(),
-            modifyTimestamp: Date.now(),
-            tags: [],
-            recorderVersion: 'imported',
-          }, session.events);
+
+        // Parse the file content
+        const importData = JSON.parse(result as string);
+
+        // Handle both single session format and array format
+        const sessionsToImport = Array.isArray(importData)
+          ? importData
+          : [importData]; // Wrap single session in array
+
+        const promises = sessionsToImport.map((data) => {
+          // Extract session and events based on the format
+          const session = data.session || data;
+          const events = data.events || [];
+
+          return addSession(
+            {
+              // Create a new session with a unique ID but maintain other properties
+              ...session,
+              id: nanoid(), // Generate a new unique ID
+              createTimestamp: Date.now(),
+              modifyTimestamp: Date.now(),
+              tags: session.tags || [],
+              recorderVersion: session.recorderVersion || "imported",
+            },
+            events
+          );
         });
-        
+
         // Wait for all sessions to be imported
-        void Promise.all(promises).then(() => {
-          // Refresh the sessions list
-          return getAllSessions();
-        }).then((sessionsData) => {
-          // Update the state with the new sessions
-          setSessions(sessionsData as unknown as Session[]);
-          
-          // Force a re-render of the table
-          table.reset();
-          
-          // Show success message
-          toast({
-            title: 'Sessions imported',
-            description: `${promises.length} sessions have been imported.`,
+        void Promise.all(promises)
+          .then(() => {
+            // Refresh the sessions list
+            return getAllSessions();
+          })
+          .then((sessionsData) => {
+            // Update the state with the new sessions
+            setSessions(sessionsData as unknown as Session[]);
+
+            // Force a re-render of the table
+            table.reset();
+
+            // Show success message
+            toast({
+              title: "Sessions imported",
+              description: `${promises.length} session(s) have been imported.`,
+            });
+          })
+          .catch((error) => {
+            console.error("Import error:", error);
+            toast({
+              title: "Import failed",
+              description: `Failed to import sessions: ${error.message}`,
+              variant: "destructive",
+            });
           });
-        }).catch(error => {
-          console.error("Import error:", error);
-          toast({
-            title: 'Import failed',
-            description: 'Failed to import sessions.',
-            variant: 'destructive',
-          });
-        });
       } catch (e) {
+        console.error("Parse error:", e);
         toast({
-          title: 'Import failed',
-          description: 'Failed to import sessions.',
-          variant: 'destructive',
+          title: "Import failed",
+          description:
+            "Failed to parse the imported file. Make sure it's a valid JSON format.",
+          variant: "destructive",
         });
       }
     };
     reader.readAsText(file);
-    e.target.value = '';
+    e.target.value = "";
   };
 
   return (
@@ -393,9 +415,9 @@ export function SessionList() {
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -410,14 +432,20 @@ export function SessionList() {
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   No sessions found.
                 </TableCell>
               </TableRow>

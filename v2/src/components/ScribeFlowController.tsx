@@ -20,6 +20,7 @@ const ScribeFlowController: React.FC<ScribeFlowControllerProps> = ({
   const [activeTab, setActiveTab] = useState('flow');
   const [userFlowSteps, setUserFlowSteps] = useState<ActionStep[]>([]);
   const [domSnapshots, setDomSnapshots] = useState<any[]>([]);
+  const [inputValues, setInputValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!events || events.length === 0) return;
@@ -46,13 +47,29 @@ const ScribeFlowController: React.FC<ScribeFlowControllerProps> = ({
       
       console.log(`Processing ${clickEvents.length} click events and ${inputEvents.length} input events`);
       
+      // Process and store input values for each input event
+      const newInputValues: Record<string, string> = {};
+      inputEvents.forEach(event => {
+        if (event.value && event.element) {
+          newInputValues[event.element] = event.value;
+          console.log(`Stored input value for ${event.element}:`, event.value);
+        }
+      });
+      setInputValues(newInputValues);
+      
       // Log some sample events for debugging
       if (inputEvents.length > 0) {
         console.log('Sample input event:', inputEvents[0]);
       }
       
+      // Enhance input events with full values before processing
+      const enhancedInputEvents = inputEvents.map(event => ({
+        ...event,
+        value: event.value || newInputValues[event.element] || ''
+      }));
+      
       // Process interactions to create a flow
-      const steps = processInteractionsToFlow(clickEvents, inputEvents);
+      const steps = processInteractionsToFlow(clickEvents, enhancedInputEvents);
       console.log(`Generated ${steps.length} flow steps`);
       
       setUserFlowSteps(steps);
@@ -75,14 +92,26 @@ const ScribeFlowController: React.FC<ScribeFlowControllerProps> = ({
       .filter(event => event.domSnapshot)
       .map(event => ({
         timestamp: event.timestamp,
-        url: window.location.href, // In a real implementation, you'd store the URL with each snapshot
+        url: event.url || window.location.href,
         snapshot: event.domSnapshot,
         target: event.target,
         type: 'click'
       }));
     
+    // Also include DOM snapshots after input events
+    const inputSnapshots = extractEventsOfType(events, CustomEventType.InputChange)
+      .filter(event => event.domSnapshot)
+      .map(event => ({
+        timestamp: event.timestamp,
+        url: event.url || window.location.href,
+        snapshot: event.domSnapshot,
+        target: event.element,
+        value: event.value,
+        type: 'input'
+      }));
+    
     // Combine all snapshots and sort by timestamp
-    const allSnapshots = [...initialSnapshots, ...clickSnapshots]
+    const allSnapshots = [...initialSnapshots, ...clickSnapshots, ...inputSnapshots]
       .sort((a, b) => a.timestamp - b.timestamp);
     
     setDomSnapshots(allSnapshots);
@@ -101,6 +130,7 @@ const ScribeFlowController: React.FC<ScribeFlowControllerProps> = ({
           loading={loading} 
           sessionId={sessionId}
           domSnapshots={domSnapshots}
+          inputValues={inputValues}
         />
       </TabsContent>
       

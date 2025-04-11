@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/com
 import { Button } from '~/components/ui/button';
 import { ChevronRight, ChevronDown, Download } from 'lucide-react';
 import { Skeleton } from '~/components/ui/skeleton';
+import { Badge } from '~/components/ui/badge';
 import type { ActionStep } from '~/utils/dom-processor';
 import { generateDOMJson } from '~/utils/dom-processor';
 
@@ -11,9 +12,16 @@ interface UserFlowViewProps {
   loading: boolean;
   sessionId: string;
   domSnapshots: any[];
+  inputValues?: Record<string, string>;
 }
 
-const UserFlowView: React.FC<UserFlowViewProps> = ({ steps, loading, sessionId, domSnapshots }) => {
+const UserFlowView: React.FC<UserFlowViewProps> = ({ 
+  steps, 
+  loading, 
+  sessionId, 
+  domSnapshots, 
+  inputValues = {} 
+}) => {
   const [expandedStep, setExpandedStep] = useState<number | null>(null);
 
   const toggleStepDetails = (stepId: number) => {
@@ -22,7 +30,7 @@ const UserFlowView: React.FC<UserFlowViewProps> = ({ steps, loading, sessionId, 
 
   const exportDOMJson = () => {
     // Generate JSON
-    const jsonContent = generateDOMJson(domSnapshots);
+    const jsonContent = generateDOMJson(domSnapshots, inputValues);
     
     // Create a download link
     const blob = new Blob([jsonContent], { type: 'application/json' });
@@ -34,6 +42,30 @@ const UserFlowView: React.FC<UserFlowViewProps> = ({ steps, loading, sessionId, 
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  // Function to enhance step descriptions with input values when applicable
+  const getEnhancedDescription = (step: ActionStep): string => {
+    if (step.type === 'input') {
+      // If it's an input event, try to find the input value
+      const targetElement = step.details?.element;
+      
+      // If we have the input value, include it in the description
+      if (targetElement && inputValues[targetElement]) {
+        return step.description.includes('Type "') 
+          ? step.description // Already contains the value
+          : `Type "${inputValues[targetElement]}" in ${step.details?.element?.split(' ').pop() || 'field'}`;
+      }
+      
+      // If we have a value in the step details, use that
+      if (step.details?.value) {
+        return step.description.includes('Type "') 
+          ? step.description
+          : `Type "${step.details.value}" in ${step.details?.element?.split(' ').pop() || 'field'}`;
+      }
+    }
+    
+    return step.description;
   };
 
   return (
@@ -68,7 +100,14 @@ const UserFlowView: React.FC<UserFlowViewProps> = ({ steps, loading, sessionId, 
                   <div className="flex-grow">
                     <CardHeader className="py-3 px-4">
                       <div className="flex justify-between items-center">
-                        <CardTitle className="text-lg">{step.description}</CardTitle>
+                        <div className="flex-1 pr-2">
+                          <CardTitle className="text-lg">{getEnhancedDescription(step)}</CardTitle>
+                          {step.type === 'input' && (step.details?.value || inputValues[step.details?.element]) && (
+                            <Badge className="mt-1" variant="outline">
+                              Input: {step.details?.value || inputValues[step.details?.element]}
+                            </Badge>
+                          )}
+                        </div>
                         <Button 
                           variant="ghost" 
                           size="sm"
@@ -88,7 +127,10 @@ const UserFlowView: React.FC<UserFlowViewProps> = ({ steps, loading, sessionId, 
                         <div className="bg-gray-50 p-3 rounded border border-gray-200 text-sm">
                           <h4 className="font-medium mb-2 text-gray-700">Details</h4>
                           <pre className="text-xs overflow-auto">
-                            {JSON.stringify(step.details, null, 2)}
+                            {JSON.stringify({
+                              ...step.details,
+                              value: step.details?.value || inputValues[step.details?.element],
+                            }, null, 2)}
                           </pre>
                         </div>
                       </div>

@@ -48,6 +48,12 @@
   "v3": {
     "common": {
       "manifest_version": 3,
+      "permissions": [
+        "activeTab",
+        "storage",
+        "unlimitedStorage",
+        "allow-scripts"
+      ],
       "background": {
         "service_worker": "background/index.ts",
         "type": "module"
