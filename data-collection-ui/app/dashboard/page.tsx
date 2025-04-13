@@ -1,19 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sidebar } from "@/components/sidebar";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { Sidebar } from "@/components/shared/sidebar";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { taskCategories } from "@/lib/task-data";
 import { useTaskStatus } from "@/contexts/task-status-context";
-import { CheckCircle, Clock, ArrowRight, FileWarning } from "lucide-react";
+import {
+  CheckCircle,
+  Clock,
+  ArrowRight,
+  FileWarning,
+  Loader2,
+} from "lucide-react";
 import Link from "next/link";
 
 export default function Dashboard() {
-  const { taskStatuses, resetAllStatuses } = useTaskStatus();
+  const { taskStatuses, resetAllStatuses, isLoading } = useTaskStatus();
   const [mounted, setMounted] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Ensure we only render after hydration to avoid hydration mismatch
   useEffect(() => {
@@ -64,6 +71,12 @@ export default function Dashboard() {
     };
   });
 
+  const handleResetProgress = async () => {
+    setIsResetting(true);
+    await resetAllStatuses();
+    setIsResetting(false);
+  };
+
   if (!mounted) {
     return null; // Prevent hydration mismatch
   }
@@ -77,8 +90,20 @@ export default function Dashboard() {
             <h1 className="text-xl font-semibold">Dashboard</h1>
             <div className="ml-auto flex items-center gap-4">
               <ThemeToggle />
-              <Button variant="outline" size="sm" onClick={resetAllStatuses}>
-                Reset Progress
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleResetProgress}
+                disabled={isLoading || isResetting}
+              >
+                {isResetting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Resetting...
+                  </>
+                ) : (
+                  "Reset Progress"
+                )}
               </Button>
             </div>
           </div>
@@ -88,122 +113,136 @@ export default function Dashboard() {
           <Alert className="mb-6 bg-warning">
             <FileWarning className="h-4 w-4" color="red" />
             <AlertDescription className="text-background font-bold">
-              Do NOT clear your browser cache—your progress is stored locally.
+              Your progress is now stored in your account. Sign in on any device
+              to access your data.
             </AlertDescription>
           </Alert>
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Card className="bg-chart-1">
-              <CardHeader className="pb-0">
-                <CardTitle className="text-sm font-medium text-foreground">
-                  Total Tasks
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{totalTasks}</div>
-              </CardContent>
-            </Card>
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground">Loading your progress...</p>
+            </div>
+          ) : (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <Card className="bg-chart-1">
+                  <CardHeader className="pb-0">
+                    <CardTitle className="text-sm font-medium text-foreground">
+                      Total Tasks
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{totalTasks}</div>
+                  </CardContent>
+                </Card>
 
-            <Card className="bg-chart-2">
-              <CardHeader className="pb-0">
-                <CardTitle className="text-sm font-medium text-foreground">
-                  Completed
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-foreground">
-                  {completedTasks}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-chart-3">
-              <CardHeader className="pb-0">
-                <CardTitle className="text-sm font-medium text-foreground">
-                  In Progress
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-foreground">
-                  {inProgressTasks}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-chart-4">
-              <CardHeader className="pb-0">
-                <CardTitle className="text-sm font-medium text-foreground">
-                  Completion Rate
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">
-                  {completionPercentage}%
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Bento Grid for Category Stats */}
-          <h2 className="text-lg font-medium mb-4">Category Progress</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {categoryStats.map((category) => (
-              <Card
-                key={category.id}
-                className={
-                  category.percentage === 100
-                    ? "border-green-500/30 bg-green-500/10"
-                    : category.percentage >= 50
-                    ? "border-warning/50 bg-warning/20"
-                    : "border-destructive/10 bg-destructive/10"
-                }
-              >
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-medium flex justify-between">
-                    {category.name}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {category.completed}/{category.total} tasks
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-1">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        <span>Completed: {category.completed}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4 text-amber-500" />
-                        <span>In Progress: {category.inProgress}</span>
-                      </div>
+                <Card className="bg-chart-2">
+                  <CardHeader className="pb-0">
+                    <CardTitle className="text-sm font-medium text-foreground">
+                      Completed
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-foreground">
+                      {completedTasks}
                     </div>
+                  </CardContent>
+                </Card>
 
-                    {/* Progress bar */}
-                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary"
-                        style={{ width: `${category.percentage}%` }}
-                      />
+                <Card className="bg-chart-3">
+                  <CardHeader className="pb-0">
+                    <CardTitle className="text-sm font-medium text-foreground">
+                      In Progress
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-foreground">
+                      {inProgressTasks}
                     </div>
+                  </CardContent>
+                </Card>
 
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm font-medium">
-                        {category.percentage}% complete
+                <Card className="bg-chart-4">
+                  <CardHeader className="pb-0">
+                    <CardTitle className="text-sm font-medium text-foreground">
+                      Completion Rate
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">
+                      {completionPercentage}%
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Bento Grid for Category Stats */}
+              <h2 className="text-lg font-medium mb-4">Category Progress</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {categoryStats.map((category) => (
+                  <Card
+                    key={category.id}
+                    className={
+                      category.percentage === 100
+                        ? "border-green-500/30 bg-green-500/10"
+                        : category.percentage >= 50
+                        ? "border-warning/50 bg-warning/20"
+                        : "border-destructive/10 bg-destructive/10"
+                    }
+                  >
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base font-medium flex justify-between">
+                        {category.name}
+                        <span className="text-sm font-normal text-muted-foreground">
+                          {category.completed}/{category.total} tasks
+                        </span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-1">
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <span>Completed: {category.completed}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-4 w-4 text-amber-500" />
+                            <span>In Progress: {category.inProgress}</span>
+                          </div>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-primary"
+                            style={{ width: `${category.percentage}%` }}
+                          />
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                          <div className="text-sm font-medium">
+                            {category.percentage}% complete
+                          </div>
+                          <Link href={`/tasks?category=${category.id}`}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 gap-1"
+                            >
+                              <span>View Tasks</span>
+                              <ArrowRight className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
-                      <Link href={`/tasks?category=${category.id}`}>
-                        <Button variant="ghost" size="sm" className="h-8 gap-1">
-                          <span>View Tasks</span>
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
         </main>
       </div>
     </>

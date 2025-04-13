@@ -2,8 +2,9 @@ import type React from "react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from "@/components/shared/theme-provider";
 import { TaskStatusProvider } from "@/contexts/task-status-context";
+import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -28,6 +29,7 @@ export default function RootLayout({
           <TaskStatusProvider>
             <div className="flex h-screen">{children}</div>
           </TaskStatusProvider>
+          <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>
     </html>

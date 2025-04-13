@@ -1,0 +1,60 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "baseUrl": ".",
+    "outDir": "dist",
+    "tsBuildInfoFile": "./tsconfig.tsbuildinfo",
+    // Target and module configuration
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    // Type checking and strictness
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictBindCallApply": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    // Output options
+    "esModuleInterop": true,
+    "incremental": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "declaration": true,
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "downlevelIteration": true,
+    "verbatimModuleSyntax": true,
+    "forceConsistentCasingInFileNames": true,
+    // Vite related options
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    // Libraries and types
+    "lib": [
+      "es6",
+      "dom"
+    ],
+    "jsx": "react-jsx",
+    "paths": {
+      "~/*": [
+        "src/*"
+      ]
+    },
+    "types": [
+      "node",
+      "jest",
+      "vite/client",
+      "@types/dom-mediacapture-transform",
+      "@types/offscreencanvas"
+    ]
+  },
+  "exclude": [
+    "dist",
+    "node_modules",
+    "**/vite.config.ts",
+    "**/vitest.config.ts",
+    "**/test"
+  ],
+  "compileOnSave": true
+}

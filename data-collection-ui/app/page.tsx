@@ -37,7 +37,7 @@ export default function WelcomePage() {
 
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push("/auth")}
             size="lg"
             className="rounded-full w-24 h-24 p-0 bg-primary hover:bg-primary/90 cursor-pointer"
           >
