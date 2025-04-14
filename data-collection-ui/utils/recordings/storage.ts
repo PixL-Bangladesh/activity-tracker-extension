@@ -1,5 +1,5 @@
-import { openDB } from 'idb';
-import type { eventWithTime } from '@rrweb/types';
+import { openDB } from "idb";
+import type { eventWithTime } from "@rrweb/types";
 
 /**
  * Storage related functions with indexedDB.
@@ -14,8 +14,7 @@ export type Session = {
   recorderVersion: string;
 };
 
-
-const EventStoreName = 'events';
+const EventStoreName = "events";
 type EventData = {
   id: string;
   events: eventWithTime[];
@@ -25,7 +24,7 @@ export async function getEventStore() {
   return openDB<EventData>(EventStoreName, 1, {
     upgrade(db) {
       db.createObjectStore(EventStoreName, {
-        keyPath: 'id',
+        keyPath: "id",
         autoIncrement: false,
       });
     },
@@ -38,14 +37,14 @@ export async function getEvents(id: string) {
   return data.events;
 }
 
-const SessionStoreName = 'sessions';
+const SessionStoreName = "sessions";
 export async function getSessionStore() {
   return openDB<Session>(SessionStoreName, 1, {
     upgrade(db) {
       // Create a store of objects
       db.createObjectStore(SessionStoreName, {
         // The 'id' property of the object will be the key.
-        keyPath: 'id',
+        keyPath: "id",
         // If it isn't explicitly set, create a value by auto incrementing.
         autoIncrement: false,
       });
@@ -63,7 +62,7 @@ export async function addSession(session: Session, events: eventWithTime[]) {
 
 export async function updateSession(
   session: Session,
-  events?: eventWithTime[],
+  events?: eventWithTime[]
 ) {
   const eventStore = await getEventStore();
   if (events) {
@@ -96,10 +95,10 @@ export async function deleteSession(id: string) {
 export async function deleteSessions(ids: string[]) {
   const eventStore = await getEventStore();
   const sessionStore = await getSessionStore();
-  const eventTransition = eventStore.transaction(EventStoreName, 'readwrite');
+  const eventTransition = eventStore.transaction(EventStoreName, "readwrite");
   const sessionTransition = sessionStore.transaction(
     SessionStoreName,
-    'readwrite',
+    "readwrite"
   );
   const promises = [];
   for (const id of ids) {
@@ -116,11 +115,11 @@ export async function downloadSessions(ids: string[]) {
     const events = await getEvents(sessionId);
     const session = await getSession(sessionId);
     const blob = new Blob([JSON.stringify({ session, events }, null, 2)], {
-      type: 'application/json',
+      type: "application/json",
     });
 
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `${session.name}.json`;
     document.body.appendChild(a);
@@ -128,4 +127,14 @@ export async function downloadSessions(ids: string[]) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
+}
+
+export async function getSessionAndEvents(sessionId: string) {
+  const events = await getEvents(sessionId);
+  const session = await getSession(sessionId);
+  const blob = new Blob([JSON.stringify({ session, events }, null, 2)], {
+    type: "application/json",
+  });
+
+  return blob;
 }

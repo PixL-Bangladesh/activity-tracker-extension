@@ -17,6 +17,7 @@ import { Upload } from "lucide-react";
 import { taskCategories } from "@/lib/task-data";
 import Script from "next/script";
 import Replayer from "rrweb-player";
+import { getReplayConsolePlugin } from "@rrweb/rrweb-plugin-console-replay";
 
 interface SessionData {
   session: {
@@ -74,6 +75,11 @@ export default function RecordingPage() {
         props: {
           events: sessionData.events,
           autoPlay: true,
+          plugins: [
+            getReplayConsolePlugin({
+              level: ["info", "log", "warn", "error"],
+            }),
+          ],
         },
       });
     } catch (err) {
@@ -116,14 +122,19 @@ export default function RecordingPage() {
       />
       <link
         rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/rrweb-player@latest/dist/style.css"
+        href="https://cdn.jsdelivr.net/npm/rrweb-player@2.0.0-alpha.18/dist/style.css"
       />
 
       <Sidebar />
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-background">
         <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex h-14 items-center px-4 lg:px-8">
-            <h1 className="text-xl font-semibold">Recording Player</h1>
+            <h1 className="text-xl font-semibold">
+              Recording Player
+              <span className="text-sm text-muted-foreground ml-2">
+                (Refresh the page if the player does not function properly)
+              </span>
+            </h1>
           </div>
         </header>
 

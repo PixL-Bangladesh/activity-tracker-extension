@@ -97,6 +97,12 @@ export function TaskStatusProvider({ children }: { children: ReactNode }) {
         data: { user },
       } = await supabase.auth.getUser();
 
+      if (status === "in-progress") {
+        localStorage.setItem("inRecordingTaskId", taskId);
+      } else {
+        localStorage.removeItem("inRecordingTaskId");
+      }
+
       if (!user) {
         toast.error("Please sign in to update task statuses");
         return;

@@ -10,6 +10,11 @@ import { TaskCategoryPanel } from "@/components/tasks/task-category-panel";
 import { taskCategories } from "@/lib/task-data";
 import { useTaskStatus } from "@/contexts/task-status-context";
 import { useSearchParams } from "next/navigation";
+import { useRecording } from "@/utils/recordings/useRecording";
+import { deleteSession, getSessionAndEvents } from "@/utils/recordings/storage";
+import { toast } from "sonner";
+import { uploadFileToBucket } from "@/actions/bucket";
+import { createClient } from "@/utils/supabase/client";
 
 export default function TasksPage() {
   const { resetAllStatuses } = useTaskStatus();
@@ -17,6 +22,7 @@ export default function TasksPage() {
   const [mounted, setMounted] = useState(false);
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category");
+  const { isRecording, start, stop } = useRecording();
 
   // Ensure we only render after hydration to avoid hydration mismatch
   useEffect(() => {
@@ -35,6 +41,36 @@ export default function TasksPage() {
   if (!mounted) {
     return null; // Prevent hydration mismatch
   }
+
+  const handleStartRecording = async () => {
+    start(`Session-${new Date().toISOString()}`);
+  };
+
+  const handleStopRecording = async () => {
+    try {
+      const result = await stop();
+      if (result) {
+        // Refresh sessions list by adding the new session
+        const inRecordingTaskId = localStorage.getItem("inRecordingTaskId");
+        const sessionBlob = await getSessionAndEvents(result.session.id);
+        const supabase = createClient();
+        const user = (await supabase.auth.getUser()).data.user;
+        const uploadData = await uploadFileToBucket({
+          bucketName: "recordings",
+          filePath: `${user?.email}/${inRecordingTaskId}.json`,
+          file: sessionBlob,
+        });
+        await deleteSession(result.session.id);
+        if (uploadData.error) {
+          throw new Error(uploadData.error.message);
+        }
+        toast.success("Recording stopped and uploaded successfully.");
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Error stopping recording: ${message}`);
+    }
+  };
 
   return (
     <>
@@ -63,6 +99,22 @@ export default function TasksPage() {
         </header>
 
         <main className="flex-1 overflow-auto p-4 lg:p-6">
+          <div className="flex items-center gap-2 mb-5">
+            {isRecording ? (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleStopRecording}
+              >
+                Stop Recording
+              </Button>
+            ) : (
+              <Button size="sm" onClick={() => handleStartRecording()}>
+                Start Recording
+              </Button>
+            )}
+          </div>
+
           <div className="space-y-4">
             {filteredCategories.map((category) => (
               <TaskCategoryPanel

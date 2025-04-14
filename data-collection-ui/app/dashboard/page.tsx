@@ -16,15 +16,24 @@ import {
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
+import { createClient } from "@/utils/supabase/client";
+import { User } from "@supabase/supabase-js";
 
 export default function Dashboard() {
   const { taskStatuses, resetAllStatuses, isLoading } = useTaskStatus();
   const [mounted, setMounted] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const supbase = createClient();
+  const [user, setUser] = useState<User | null>(null);
 
   // Ensure we only render after hydration to avoid hydration mismatch
   useEffect(() => {
     setMounted(true);
+    const fetchUser = async () => {
+      const { data } = await supbase.auth.getUser();
+      setUser(data.user);
+    };
+    fetchUser();
   }, []);
 
   // Calculate statistics
@@ -110,6 +119,15 @@ export default function Dashboard() {
         </header>
 
         <main className="flex-1 overflow-auto p-4 lg:p-6">
+          {user && (
+            <h2 className="text-xl font-semibold mb-5">
+              Welcome back,{" "}
+              <span className="text-chart-5">
+                {user.user_metadata.fullName}
+              </span>
+              !
+            </h2>
+          )}
           <Alert className="mb-6 bg-warning">
             <FileWarning className="h-4 w-4" color="red" />
             <AlertDescription className="text-background font-bold">
