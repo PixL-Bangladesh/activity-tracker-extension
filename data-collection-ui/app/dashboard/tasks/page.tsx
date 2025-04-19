@@ -99,7 +99,7 @@ export default function TasksPage() {
         </header>
 
         <main className="flex-1 overflow-auto p-4 lg:p-6">
-          <div className="flex items-center gap-2 mb-5">
+          {/* <div className="flex items-center gap-2 mb-5">
             {isRecording ? (
               <Button
                 variant="destructive"
@@ -113,7 +113,7 @@ export default function TasksPage() {
                 Start Recording
               </Button>
             )}
-          </div>
+          </div> */}
 
           <div className="space-y-4">
             {filteredCategories.map((category) => (

@@ -537,15 +537,18 @@ function startRecord(config: recordOptions<eventWithTime>) {
   stopFn =
     record({
       emit: emitEvent,
+      recordCrossOriginIframes: true,
+      sampling: { mousemove: false, input: "last" },
       plugins: [
         getRecordConsolePlugin({
           level: ["info", "log", "warn", "error"],
-          lengthThreshold: 2000,
+          lengthThreshold: 10000,
           stringifyOptions: {
             stringLengthLimit: 1000,
             numOfKeysLimit: 100,
-            depthOfLimit: 2,
+            depthOfLimit: 1,
           },
+          logger: window.console,
         }),
       ],
       ...config,
