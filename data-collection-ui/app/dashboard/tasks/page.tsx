@@ -22,6 +22,7 @@ export default function TasksPage() {
   const [mounted, setMounted] = useState(false);
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category");
+  console.log("categoryParam", categoryParam);
   const { isRecording, start, stop } = useRecording();
 
   // Ensure we only render after hydration to avoid hydration mismatch

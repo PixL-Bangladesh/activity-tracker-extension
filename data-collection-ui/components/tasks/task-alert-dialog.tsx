@@ -14,15 +14,14 @@ import { useTaskStatus } from "@/contexts/task-status-context";
 import { InfoIcon, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "../ui/button";
-import { VscDebugStart } from "react-icons/vsc";
-import { useRecording } from "@/utils/recordings/useRecording";
+import { toast } from "sonner";
 
 interface TaskAlertDialogProps {
   task: Task | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   completionStatus: boolean;
+  totalInProgressCount: number;
 }
 
 export function TaskAlertDialog({
@@ -30,12 +29,20 @@ export function TaskAlertDialog({
   open,
   onOpenChange,
   completionStatus,
+  totalInProgressCount,
 }: TaskAlertDialogProps) {
   const { updateTaskStatus } = useTaskStatus();
   const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleProceed = async () => {
+    if (totalInProgressCount > 0) {
+      toast.warning(
+        "You have another task in progress. Please complete it before starting a new one."
+      );
+      return;
+    }
+
     if (task) {
       setIsUpdating(true);
       await updateTaskStatus(task.id, "in-progress");

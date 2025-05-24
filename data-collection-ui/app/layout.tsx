@@ -5,6 +5,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 import { TaskStatusProvider } from "@/contexts/task-status-context";
 import { Toaster } from "sonner";
+import DeviceDetector from "@/lib/use-device";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,9 +27,11 @@ export default function RootLayout({
           defaultTheme="system"
           enableSystem={true}
         >
-          <TaskStatusProvider>
-            <div className="flex h-screen">{children}</div>
-          </TaskStatusProvider>
+          <DeviceDetector>
+            <TaskStatusProvider>
+              <div className="flex h-screen bg-background">{children}</div>
+            </TaskStatusProvider>
+          </DeviceDetector>
           <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>

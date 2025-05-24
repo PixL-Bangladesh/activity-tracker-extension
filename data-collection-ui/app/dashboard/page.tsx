@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
-import { User } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 
 export default function Dashboard() {
   const { taskStatuses, resetAllStatuses, isLoading } = useTaskStatus();
@@ -34,7 +34,7 @@ export default function Dashboard() {
       setUser(data.user);
     };
     fetchUser();
-  }, []);
+  }, [supbase]);
 
   // Calculate statistics
   const totalTasks = taskCategories.reduce(
@@ -243,7 +243,9 @@ export default function Dashboard() {
                           <div className="text-sm font-medium">
                             {category.percentage}% complete
                           </div>
-                          <Link href={`/tasks?category=${category.id}`}>
+                          <Link
+                            href={`/dashboard/tasks?category=${category.id}`}
+                          >
                             <Button
                               variant="ghost"
                               size="sm"

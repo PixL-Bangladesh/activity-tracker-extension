@@ -202,7 +202,7 @@ const RegisterForm = () => {
                 "Creating..."
               ) : (
                 <>
-                  "Create Account"
+                  Create Account
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </>
               )}

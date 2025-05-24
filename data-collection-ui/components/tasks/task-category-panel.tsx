@@ -71,6 +71,10 @@ export function TaskCategoryPanel({
     (task) => taskStatuses[task.id] === "in-progress"
   ).length;
 
+  const totalInProgressCount = Object.values(taskStatuses).filter(
+    (status) => status === "in-progress"
+  ).length;
+
   return (
     <>
       <Accordion
@@ -198,6 +202,7 @@ export function TaskCategoryPanel({
         </AccordionItem>
       </Accordion>
       <TaskAlertDialog
+        totalInProgressCount={totalInProgressCount}
         task={selectedTask}
         open={alertOpen}
         onOpenChange={setAlertOpen}

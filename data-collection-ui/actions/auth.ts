@@ -8,6 +8,7 @@ import type {
   SignInWithPasswordCredentials,
   SignUpWithPasswordCredentials,
 } from "@supabase/supabase-js";
+import { printIfDev } from "@/utils/development/debug";
 
 type AuthData = {
   email: string;
@@ -24,11 +25,17 @@ export async function login(authData: AuthData) {
     password: authData.password,
   };
 
-  const { error } = await supabase.auth.signInWithPassword(data);
+  const { data: userData, error } = await supabase.auth.signInWithPassword(
+    data
+  );
 
-  if (process.env.NEXT_PUBLIC_NODE_ENV === "development") {
-    console.log("Login error:", error);
-  }
+  // printIfDev({
+  //   errorObject: {
+  //     user: userData,
+  //     error,
+  //   },
+  //   message: "Login error",
+  // });
 
   if (error) {
     redirect("/error");
@@ -41,12 +48,22 @@ export async function login(authData: AuthData) {
     .limit(1)
     .single();
 
+  // printIfDev({
+  //   errorObject: existingUser.error,
+  //   message: "Existing user data",
+  // });
+
   if (!existingUser.data) {
-    const name = (await supabase.auth.getUser()).data.user?.user_metadata
-      .fullName as string;
+    const name = userData.user.user_metadata.fullName as string;
     const { error } = await supabase.from("user_profiles").insert({
+      id: userData.user.id,
       email: authData.email,
       fullName: name,
+    });
+
+    printIfDev({
+      errorObject: error,
+      message: "Insert user data",
     });
 
     if (error) {

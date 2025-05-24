@@ -13,23 +13,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Upload } from "lucide-react";
 import { taskCategories } from "@/lib/task-data";
 import Script from "next/script";
 import Replayer from "rrweb-player";
 import { getReplayConsolePlugin } from "@rrweb/rrweb-plugin-console-replay";
+import type { Session } from "@/types/Session";
+import type { eventWithTime } from "rrweb";
+import { downloadFileFromBucket } from "@/actions/bucket";
+import { createClient } from "@/utils/supabase/client";
+import { toast } from "sonner";
+import { printIfDev } from "@/utils/development/debug";
+import type { TaskEventBucketType } from "@/types/tasks";
 
 interface SessionData {
-  session: {
-    id: string;
-    name: string;
-    tags: string[];
-    createTimestamp: number;
-    modifyTimestamp: number;
-    recorderVersion: string;
-  };
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  events: any[];
+  session: Session;
+  events: eventWithTime[];
 }
 
 export default function RecordingPage() {
@@ -43,6 +41,7 @@ export default function RecordingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [playerLoaded, setPlayerLoaded] = useState(false);
+  const supabase = createClient();
 
   // Find the task
   useEffect(() => {
@@ -86,33 +85,71 @@ export default function RecordingPage() {
       console.error("Failed to initialize player:", err);
       setError("Failed to initialize player. Please try again.");
     }
-  }, [sessionData, playerLoaded]);
+  }, [playerLoaded, sessionData]);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const fetchRecordingData = async () => {
+    try {
+      setIsLoading(true);
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      const { data, error } = await downloadFileFromBucket({
+        bucketName: "recordings",
+        filePath: `${userId}/${taskId}.json`,
+      });
 
-    setIsLoading(true);
-    setError(null);
+      printIfDev({ errorObject: data });
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const jsonData = JSON.parse(e.target?.result as string);
-        setSessionData(jsonData);
-        setIsLoading(false);
-      } catch (err) {
-        console.error("Failed to parse JSON:", err);
-        setError("Invalid JSON file. Please upload a valid recording file.");
-        setIsLoading(false);
+      if (error) {
+        toast.error("Failed to fetch recording data. Please try again.", {
+          description: error.message,
+        });
+
+        printIfDev(error);
+
+        setError("Failed to fetch recording data. Please try again.");
+        return;
       }
-    };
-    reader.onerror = () => {
-      setError("Failed to read file. Please try again.");
+
+      // turn blob to json
+      if (data) {
+        try {
+          const jsonText = await data.text();
+          const jsonData = JSON.parse(jsonText) as TaskEventBucketType;
+
+          setSessionData({
+            session: jsonData.session,
+            events: jsonData.events,
+          });
+
+          printIfDev({
+            errorObject: jsonData,
+          });
+        } catch (parseError) {
+          console.error("Failed to parse JSON data:", parseError);
+          toast.error("Failed to parse recording data", {
+            description:
+              "The recording file appears to be corrupted or in an invalid format.",
+          });
+          setError(
+            "Failed to parse recording data. The file may be corrupted."
+          );
+        }
+      }
+    } catch (error) {
+      const _error =
+        error instanceof Error ? error : new Error("Unknown error");
+      toast.error("An error occured while fetching the data from the bucket", {
+        description: _error.message,
+      });
+      setError("Failed to fetch recording data. Please try again.");
+    } finally {
       setIsLoading(false);
-    };
-    reader.readAsText(file);
+    }
   };
+
+  useEffect(() => {
+    if (!taskId) return;
+    fetchRecordingData();
+  }, [taskId]);
 
   return (
     <>
@@ -148,45 +185,7 @@ export default function RecordingPage() {
                 </p>
               </div>
 
-              {!sessionData ? (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Upload Recording</CardTitle>
-                    <CardDescription>
-                      Upload a JSON file containing the session recording data
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border rounded-lg">
-                      <Upload className="h-10 w-10 text-muted-foreground mb-4" />
-                      <p className="mb-4 text-center text-muted-foreground">
-                        Drag and drop your recording JSON file here, or click to
-                        browse
-                      </p>
-                      <label className="cursor-pointer">
-                        <input
-                          id="recording-file"
-                          name="recording-file"
-                          type="file"
-                          accept=".json"
-                          className="hidden"
-                          onChange={handleFileUpload}
-                          disabled={isLoading}
-                        />
-                        <Button
-                          disabled={isLoading}
-                          onClick={() =>
-                            document.getElementById("recording-file")?.click()
-                          }
-                        >
-                          {isLoading ? "Processing..." : "Select File"}
-                        </Button>
-                      </label>
-                      {error && <p className="mt-4 text-red-500">{error}</p>}
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
+              {sessionData ? (
                 <div className="space-y-4">
                   <Card className="bg-background border-none">
                     <CardHeader>
@@ -202,14 +201,13 @@ export default function RecordingPage() {
                       <div ref={playerElRef} className="" />
                     </CardContent>
                   </Card>
-
-                  <Button
-                    variant="outline"
-                    onClick={() => setSessionData(null)}
-                    className="mt-4"
-                  >
-                    Upload Different Recording
-                  </Button>
+                </div>
+              ) : (
+                <div>
+                  {/* loading */}
+                  <p className="text-center text-muted-foreground">
+                    Loading session data...
+                  </p>
                 </div>
               )}
             </div>
