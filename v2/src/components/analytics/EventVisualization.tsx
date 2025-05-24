@@ -8,12 +8,14 @@ interface EventVisualizationProps {
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   events: any[]; // All session events
   recordingStartTime: number;
+  showController?: boolean;
 }
 
 const EventVisualization: React.FC<EventVisualizationProps> = ({
   event,
   events,
   recordingStartTime,
+  showController,
 }) => {
   const visualizationRef = useRef<HTMLDivElement>(null);
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -31,7 +33,7 @@ const EventVisualization: React.FC<EventVisualizationProps> = ({
           props: {
             events: events,
             autoPlay: false,
-            showController: true,
+            showController: showController,
             width: 800,
             height: 450,
             skipInactive: true,

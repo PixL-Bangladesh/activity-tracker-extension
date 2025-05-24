@@ -4,19 +4,17 @@ export const truncateUrl = (url: string): string => {
     const urlObj = new URL(url);
     const path =
       urlObj.pathname.length > 20
-        ? urlObj.pathname.substring(0, 17) + "..."
+        ? `${urlObj.pathname.substring(0, 17)}...`
         : urlObj.pathname;
     return `${urlObj.hostname}${path}`;
   } catch (e) {
-    return url.length > 30 ? url.substring(0, 27) + "..." : url;
+    return url.length > 30 ? `${url.substring(0, 27)}...` : url;
   }
 };
 
 // Helper function to truncate strings
 export const truncateString = (str: string, maxLength: number): string => {
-  return str.length > maxLength
-    ? str.substring(0, maxLength - 3) + "..."
-    : str;
+  return str.length > maxLength ? `${str.substring(0, maxLength - 3)}...` : str;
 };
 
 // Extract page name from URL
@@ -84,14 +82,15 @@ export const getClickDescription = (data: any): string => {
     const y = data.y || 0;
 
     // Check if the target has semantic meaning
-    let meaningfulTarget = target;
-    let parentInfo = data.parentElement || "";
-    let hrefInfo = data.href || "";
+    const meaningfulTarget = target;
+    const parentInfo = data.parentElement || "";
+    const hrefInfo = data.href || "";
 
     // Check for parent button or anchor
     if (parentInfo.includes("button")) {
       return `Clicked a button (${parentInfo}) at (${x}, ${y})`;
-    } else if (parentInfo.includes("a")) {
+    }
+    if (parentInfo.includes("a")) {
       const linkText = hrefInfo ? ` (${hrefInfo})` : "";
       return `Clicked a link${linkText} at (${x}, ${y})`;
     }
@@ -99,24 +98,28 @@ export const getClickDescription = (data: any): string => {
     // Check for common interactive elements
     if (target.toLowerCase() === "button" || target.includes("btn")) {
       return `Clicked a button at (${x}, ${y})`;
-    } else if (target.toLowerCase() === "a") {
+    }
+    if (target.toLowerCase() === "a") {
       const linkText = hrefInfo ? ` (${hrefInfo})` : "";
       return `Clicked a link${linkText} at (${x}, ${y})`;
-    } else if (target.toLowerCase() === "input") {
+    }
+    if (target.toLowerCase() === "input") {
       const inputType = data.inputType || "text";
       return `Clicked an ${inputType} input at (${x}, ${y})`;
-    } else if (target.toLowerCase() === "select") {
+    }
+    if (target.toLowerCase() === "select") {
       return `Clicked a dropdown at (${x}, ${y})`;
-    } else if (target.toLowerCase() === "label") {
+    }
+    if (target.toLowerCase() === "label") {
       return `Clicked a form label at (${x}, ${y})`;
-    } else if (target.toLowerCase() === "img") {
+    }
+    if (target.toLowerCase() === "img") {
       return `Clicked an image at (${x}, ${y})`;
-    } else if (target.toLowerCase() === "svg") {
+    }
+    if (target.toLowerCase() === "svg") {
       return `Clicked an icon at (${x}, ${y})`;
-    } else if (
-      target.toLowerCase() === "span" ||
-      target.toLowerCase() === "div"
-    ) {
+    }
+    if (target.toLowerCase() === "span" || target.toLowerCase() === "div") {
       return `Clicked an interface element at (${x}, ${y})`;
     }
 
@@ -140,20 +143,25 @@ export const getKeypressDescription = (data: any): string => {
           ? ` (entered: "${truncateString(inputValue, 30)}")`
           : "";
         return `Pressed Enter to submit input${valueInfo}`;
-      } else if (target.toLowerCase() === "textarea") {
-        return `Pressed Enter for new line in textarea`;
-      } else {
-        return `Pressed Enter to confirm action`;
       }
-    } else if (key === "Escape") {
-      return `Pressed Escape to cancel`;
-    } else if (key === "Tab") {
-      return `Pressed Tab to navigate`;
-    } else if (key === "Backspace") {
-      return `Pressed Backspace to delete`;
-    } else if (key === "Delete") {
-      return `Pressed Delete to remove content`;
-    } else if (
+      if (target.toLowerCase() === "textarea") {
+        return "Pressed Enter for new line in textarea";
+      }
+      return "Pressed Enter to confirm action";
+    }
+    if (key === "Escape") {
+      return "Pressed Escape to cancel";
+    }
+    if (key === "Tab") {
+      return "Pressed Tab to navigate";
+    }
+    if (key === "Backspace") {
+      return "Pressed Backspace to delete";
+    }
+    if (key === "Delete") {
+      return "Pressed Delete to remove content";
+    }
+    if (
       key === "ArrowUp" ||
       key === "ArrowDown" ||
       key === "ArrowLeft" ||
@@ -180,13 +188,11 @@ export const getKeypressDescription = (data: any): string => {
 };
 
 // Estimate time spent on an element
-export const estimateTimeSpent = (
-  element: string,
-  events: any[]
-): number => {
+export const estimateTimeSpent = (element: string, events: any[]): number => {
   let totalTime = 0;
   let lastInteractionTime = 0;
 
+  // biome-ignore lint/complexity/noForEach: <explanation>
   events.forEach((event) => {
     const target =
       event.type === "mouseClick" || event.type === "keypress"

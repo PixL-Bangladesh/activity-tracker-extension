@@ -1,13 +1,13 @@
 export function isFirefox(): boolean {
   return (
-    (typeof window !== 'undefined' &&
-      window.navigator?.userAgent.toLowerCase().includes('firefox')) ||
+    (typeof window !== "undefined" &&
+      window.navigator?.userAgent.toLowerCase().includes("firefox")) ||
     false
   );
 }
 
 // Export dom-processor utilities
-export * from './dom-processor';
+export * from "./dom-processor";
 
 export function isInCrossOriginIFrame(): boolean {
   if (window.parent !== window) {
@@ -26,13 +26,14 @@ const HOUR = 60 * MINUTE;
 
 export function formatTime(ms: number): string {
   if (ms <= 0) {
-    return '00:00';
+    return "00:00";
   }
-  const hour = Math.floor(ms / HOUR);
-  ms = ms % HOUR;
-  const minute = Math.floor(ms / MINUTE);
-  ms = ms % MINUTE;
-  const second = Math.floor(ms / SECOND);
+  let remainingMs = ms;
+  const hour = Math.floor(remainingMs / HOUR);
+  remainingMs = remainingMs % HOUR;
+  const minute = Math.floor(remainingMs / MINUTE);
+  remainingMs = remainingMs % MINUTE;
+  const second = Math.floor(remainingMs / SECOND);
   if (hour) {
     return `${padZero(hour)}:${padZero(minute)}:${padZero(second)}`;
   }
@@ -41,7 +42,7 @@ export function formatTime(ms: number): string {
 
 function padZero(num: number, len = 2): string {
   let str = String(num);
-  const threshold = Math.pow(10, len - 1);
+  const threshold = 10 ** (len - 1);
   if (num < threshold) {
     while (String(threshold).length > str.length) {
       str = `0${num}`;

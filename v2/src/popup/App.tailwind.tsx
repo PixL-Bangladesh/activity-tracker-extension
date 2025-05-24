@@ -8,6 +8,9 @@ import type { LocalData, Session } from "~/types";
 import { CircleButton } from "~/components/ui/circle-button";
 import { Timer } from "~/components/ui/timer";
 import { Button } from "~/components/ui/button";
+import { toast } from "sonner";
+import { getAuthStatus } from "~/utils/auth";
+import { getInProgressTaskId } from "~/utils/tasks";
 
 const RECORD_BUTTON_SIZE = 3;
 const channel = new Channel();
@@ -18,6 +21,40 @@ export function App() {
   const [startTime, setStartTime] = useState(0);
   const [newSession, setNewSession] = useState<Session | null>(null);
   const [connectionError, setConnectionError] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [taskId, setTaskId] = useState<string | null>(null);
+
+  const fetchAuthStatus = async () => {
+    try {
+      const response = await getAuthStatus();
+      if (response) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+        toast.error("You are not logged in");
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error("Error fetching authentication status");
+        console.error("Error fetching authentication status:", error);
+      }
+    }
+  };
+
+  const fetchInProgressTaskId = async () => {
+    try {
+      const response = await getInProgressTaskId();
+      if (response) {
+        if (response.trim() === "") {
+          setTaskId(null);
+        } else {
+          setTaskId(response);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching in-progress task ID:", error);
+    }
+  };
 
   useEffect(() => {
     const parseStatusData = (data: LocalData[LocalDataKey.recorderStatus]) => {
@@ -27,10 +64,12 @@ export function App() {
         setStartTime(Date.now() - pausedTimestamp + startTimestamp);
       else if (startTimestamp) setStartTime(startTimestamp);
     };
+
     void Browser.storage.local.get(LocalDataKey.recorderStatus).then((data) => {
       if (!data || !data[LocalDataKey.recorderStatus]) return;
       parseStatusData((data as LocalData)[LocalDataKey.recorderStatus]);
     });
+
     void Browser.storage.local.onChanged.addListener((changes) => {
       if (!changes[LocalDataKey.recorderStatus]) return;
       const data = changes[LocalDataKey.recorderStatus]
@@ -38,6 +77,7 @@ export function App() {
       parseStatusData(data);
       if (data.errorMessage) setErrorMessage(data.errorMessage);
     });
+
     channel.on(EventName.SessionUpdated, (data) => {
       setNewSession((data as { session: Session }).session);
     });
@@ -61,6 +101,11 @@ export function App() {
         handleUnhandledRejection
       );
     };
+  }, []);
+
+  useEffect(() => {
+    fetchAuthStatus();
+    fetchInProgressTaskId();
   }, []);
 
   const safeEmit = async (eventName: EventName, data: unknown) => {
@@ -100,23 +145,25 @@ export function App() {
   };
 
   return (
-    <div className="flex flex-col w-[300px] h-[300px] p-[5%] bg-background">
+    <div className="flex flex-col w-[300px] h-[300px] p-[5%]">
       <div className="flex">
         <p className="text-md font-bold">ScreenTrail Recorder</p>
         <div className="flex-1" />
         <div className="flex flex-row space-x-2">
-          <Button
-            onClick={() => {
-              void Browser.tabs.create({ url: "/pages/index.html#/" });
-            }}
-            size="sm"
-            variant="ghost"
-            className="h-8 w-8 p-0"
-            title="Session List"
-          >
-            <ListIcon className="h-4 w-4" />
-            <span className="sr-only">Session List</span>
-          </Button>
+          {isAuthenticated && (
+            <Button
+              onClick={() => {
+                void Browser.tabs.create({ url: "/pages/index.html#/" });
+              }}
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              title="Session List"
+            >
+              <ListIcon className="h-4 w-4" />
+              <span className="sr-only">Session List</span>
+            </Button>
+          )}
           <Button
             onClick={() => {
               void Browser.runtime.openOptionsPage();
@@ -139,43 +186,19 @@ export function App() {
         />
       )}
 
-      <div className="flex justify-center gap-10 mt-5 mb-5">
-        <CircleButton
-          diameter={RECORD_BUTTON_SIZE}
-          title={
-            status === RecorderStatus.IDLE
-              ? "Start Recording"
-              : "Stop Recording"
-          }
-          onClick={() =>
-            handleRecordingAction(
-              status === RecorderStatus.IDLE ? "start" : "stop"
-            )
-          }
-        >
-          <div
-            style={{
-              width: `${RECORD_BUTTON_SIZE}rem`,
-              height: `${RECORD_BUTTON_SIZE}rem`,
-              margin: 0,
-              backgroundColor: "rgb(239, 68, 68)", // red-500
-              borderRadius:
-                status === RecorderStatus.IDLE ? "9999px" : "0.375rem",
-            }}
-          />
-        </CircleButton>
-
-        {status !== RecorderStatus.IDLE && (
+      {isAuthenticated ? (
+        <div className="flex justify-center gap-10 mt-5 mb-5">
           <CircleButton
+            disabled={taskId === null}
             diameter={RECORD_BUTTON_SIZE}
             title={
-              status === RecorderStatus.RECORDING
-                ? "Pause Recording"
-                : "Resume Recording"
+              status === RecorderStatus.IDLE
+                ? "Start Recording"
+                : "Stop Recording"
             }
             onClick={() =>
               handleRecordingAction(
-                status === RecorderStatus.RECORDING ? "pause" : "resume"
+                status === RecorderStatus.IDLE ? "start" : "stop"
               )
             }
           >
@@ -183,21 +206,62 @@ export function App() {
               style={{
                 width: `${RECORD_BUTTON_SIZE}rem`,
                 height: `${RECORD_BUTTON_SIZE}rem`,
-                borderRadius: "9999px",
                 margin: 0,
-                color: "rgb(75, 85, 99)", // gray-600
+                backgroundColor: "rgb(239, 68, 68)", // red-500
+                borderRadius:
+                  status === RecorderStatus.IDLE ? "9999px" : "0.375rem",
               }}
-            >
-              {[RecorderStatus.PAUSED, RecorderStatus.PausedSwitch].includes(
-                status
-              ) && <Play className="pl-2 w-full h-full" />}
-              {status === RecorderStatus.RECORDING && (
-                <Pause className="w-full h-full" />
-              )}
-            </div>
+            />
           </CircleButton>
-        )}
-      </div>
+
+          {status !== RecorderStatus.IDLE && (
+            <CircleButton
+              diameter={RECORD_BUTTON_SIZE}
+              title={
+                status === RecorderStatus.RECORDING
+                  ? "Pause Recording"
+                  : "Resume Recording"
+              }
+              onClick={() =>
+                handleRecordingAction(
+                  status === RecorderStatus.RECORDING ? "pause" : "resume"
+                )
+              }
+            >
+              <div
+                style={{
+                  width: `${RECORD_BUTTON_SIZE}rem`,
+                  height: `${RECORD_BUTTON_SIZE}rem`,
+                  borderRadius: "9999px",
+                  margin: 0,
+                  color: "rgb(75, 85, 99)", // gray-600
+                }}
+              >
+                {[RecorderStatus.PAUSED, RecorderStatus.PausedSwitch].includes(
+                  status
+                ) && <Play className="pl-2 w-full h-full" />}
+                {status === RecorderStatus.RECORDING && (
+                  <Pause className="w-full h-full" />
+                )}
+              </div>
+            </CircleButton>
+          )}
+        </div>
+      ) : (
+        <div className="flex justify-center gap-10 mt-5 mb-5">
+          <p className="text-sm font-medium">You are not logged in</p>
+          <Button
+            onClick={() => {
+              window.open("http://localhost:3000/auth?tab=login", "_blank");
+            }}
+            className="mt-2"
+            variant="outline"
+            size="sm"
+          >
+            Log In
+          </Button>
+        </div>
+      )}
 
       {newSession && (
         <div className="flex flex-col mt-2 p-4 rounded-md border border-gray-200">
@@ -221,6 +285,12 @@ export function App() {
       {errorMessage && (
         <div className="mt-2 p-4 rounded-md border border-red-200 bg-red-50">
           <p className="text-sm text-red-600">{errorMessage}</p>
+        </div>
+      )}
+
+      {taskId && (
+        <div className="mt-2 p-4 rounded-md border border-teal-200 bg-teal-50">
+          <p className="text-sm text-teal-600">{`Recording Session for TaskId: ${taskId}`}</p>
         </div>
       )}
 

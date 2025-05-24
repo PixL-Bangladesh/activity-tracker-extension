@@ -1,9 +1,9 @@
-import { Route, Routes } from 'react-router-dom';
-import SidebarWithHeader from '~/components/ui/sidebar-with-header';
-import { SessionList } from './SessionList.tailwind';
-import { List, Settings } from 'lucide-react';
-import Player from './Player.tailwind';
-import Analytics from './Analytics.tailwind';
+import { Route, Routes } from "react-router-dom";
+import SidebarWithHeader from "~/components/ui/sidebar-with-header";
+import { SessionList } from "./SessionList.tailwind";
+import { List, Settings } from "lucide-react";
+import Player from "./Player.tailwind";
+import Analytics from "./Analytics.tailwind";
 
 export default function App() {
   return (
@@ -11,21 +11,21 @@ export default function App() {
       title="Sessions"
       headBarItems={[
         {
-          label: 'Settings',
+          label: "Settings",
           icon: Settings,
-          href: '/options/index.html#',
+          href: "/options/index.html#",
         },
         {
-          label: 'Sessions',
+          label: "Sessions",
           icon: List,
-          href: '#',
+          href: "#",
         },
       ]}
       sideBarItems={[
         {
-          label: 'List',
+          label: "List",
           icon: List,
-          href: `#`,
+          href: "#",
         },
       ]}
     >

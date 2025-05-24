@@ -20,6 +20,9 @@ import type {
 } from "~/types";
 import { isFirefox } from "~/utils";
 import { addSession } from "~/utils/storage";
+import { getAuthInfo } from "~/utils/auth";
+import { getInProgressTaskId } from "~/utils/tasks";
+import { AXIOS } from "~/lib/axios";
 
 void (async () => {
   // assign default value to settings of this extension
@@ -69,9 +72,7 @@ void (async () => {
           [LocalDataKey.recorderStatus]: recorderStatus,
         });
       })) as RecordStartedMessage;
-
     if (!res) return;
-
     Object.assign(recorderStatus, {
       status: RecorderStatus.RECORDING,
       activeTabId: tabId,
@@ -113,6 +114,17 @@ void (async () => {
         [LocalDataKey.recorderStatus]: recorderStatus,
       });
     });
+
+    // send to server
+    const userInfo = await getAuthInfo();
+    const taskId = await getInProgressTaskId();
+    await AXIOS.post("/tasks", {
+      userId: userInfo.userId,
+      taskId,
+      events,
+      session: newSession,
+    });
+
     channel.emit(EventName.SessionUpdated, {
       session: newSession,
     });
@@ -160,6 +172,7 @@ void (async () => {
     events.forEach((event) => {
       event.timestamp += pausedTime;
     });
+
     const startResponse = (await channel
       .requestToTab(newTabId, ServiceName.StartRecord, {})
       .catch((e: { message: string }) => {
@@ -168,6 +181,7 @@ void (async () => {
           [LocalDataKey.recorderStatus]: recorderStatus,
         });
       })) as RecordStartedMessage | undefined;
+
     if (!startResponse) {
       // Restore the events data when the recording fails to start.
       events.forEach((event) => {
@@ -175,15 +189,18 @@ void (async () => {
       });
       return;
     }
+
     recorderStatus = {
       status: RecorderStatus.RECORDING,
       activeTabId: newTabId,
       startTimestamp: (startTimestamp || Date.now()) + pausedTime,
     };
+
     await Browser.storage.local.set({
       [LocalDataKey.recorderStatus]: recorderStatus,
     });
   }
+  
   channel.on(EventName.ResumeButtonClicked, async () => {
     if (recorderStatus.status !== RecorderStatus.PAUSED) return;
     recorderStatus.errorMessage = undefined;

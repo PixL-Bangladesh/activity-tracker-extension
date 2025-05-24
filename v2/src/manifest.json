@@ -52,7 +52,7 @@
         "activeTab",
         "storage",
         "unlimitedStorage",
-        "allow-scripts"
+        "http://localhost:3000/*"
       ],
       "background": {
         "service_worker": "background/index.ts",
