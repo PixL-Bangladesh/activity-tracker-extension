@@ -108,12 +108,12 @@ void (async () => {
           // ignore error
         })) ?? "new session";
     const newSession = generateSession(title);
-    await addSession(newSession, events).catch((e) => {
-      recorderStatus.errorMessage = (e as { message: string }).message;
-      void Browser.storage.local.set({
-        [LocalDataKey.recorderStatus]: recorderStatus,
-      });
-    });
+    // await addSession(newSession, events).catch((e) => {
+    //   recorderStatus.errorMessage = (e as { message: string }).message;
+    //   void Browser.storage.local.set({
+    //     [LocalDataKey.recorderStatus]: recorderStatus,
+    //   });
+    // });
 
     // send to server
     const userInfo = await getAuthInfo();
@@ -279,7 +279,7 @@ function setDefaultSettings(
     // settings[i] contains key-value settings
     if (
       typeof newSettings[i] === "object" &&
-      !(newSettings[i] instanceof Array) &&
+      !(Array.isArray(newSettings[i])) &&
       Object.keys(newSettings[i] as Record<string, unknown>).length > 0
     ) {
       if (existedSettings[i]) {

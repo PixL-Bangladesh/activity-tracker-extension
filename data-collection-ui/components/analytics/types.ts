@@ -6,6 +6,7 @@ import type {
   viewportResizeData,
   MouseInteractions,
   eventWithTime,
+  PointerTypes,
 } from "@rrweb/types";
 import type { SessionAnalysis } from "./session-analyzer";
 
@@ -42,7 +43,7 @@ export interface MouseClickData extends Partial<mouseInteractionData> {
   type: MouseInteractions; // Use the proper enum from RRWeb
   timestamp: number;
   target?: string; // Element target description
-  pointerType?: string; // Mouse, touch, pen
+  pointerType?: PointerTypes; // Mouse, touch, pen
   elementType?: string; // What type of element was clicked
   href?: string; // If the click was on a link
 }

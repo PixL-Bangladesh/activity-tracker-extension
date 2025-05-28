@@ -11,6 +11,7 @@ import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
 import { getAuthStatus } from "~/utils/auth";
 import { getInProgressTaskId } from "~/utils/tasks";
+import { config } from "~/config";
 
 const RECORD_BUTTON_SIZE = 3;
 const channel = new Channel();
@@ -248,11 +249,11 @@ export function App() {
           )}
         </div>
       ) : (
-        <div className="flex justify-center gap-10 mt-5 mb-5">
+        <div className="flex flex-col items-center mt-5 mb-5">
           <p className="text-sm font-medium">You are not logged in</p>
           <Button
             onClick={() => {
-              window.open("http://localhost:3000/auth?tab=login", "_blank");
+              window.open(`${config.SITE_URL}/auth?tab=login`, "_blank");
             }}
             className="mt-2"
             variant="outline"
@@ -268,9 +269,10 @@ export function App() {
           <p className="text-sm font-medium">New session created</p>
           <Button
             onClick={() => {
-              void Browser.tabs.create({
-                url: `/pages/index.html#/player/${newSession.id}`,
-              });
+              window.open(
+                `${config.SITE_URL}/dashboard/recordings?taskId=${taskId}`,
+                "_blank"
+              );
               setNewSession(null);
             }}
             className="mt-2"

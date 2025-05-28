@@ -32,7 +32,7 @@ export class BrowserVideoGenerator {
 
   constructor() {
     this.canvas = document.createElement("canvas");
-    this.ctx = this.canvas.getContext("2d")!;
+    this.ctx = this.canvas.getContext("2d") as CanvasRenderingContext2D;
   }
 
   async generateVideo(options: VideoGenerationConfig): Promise<Blob> {
@@ -63,10 +63,10 @@ export class BrowserVideoGenerator {
       // Use the scaling method to improve the video quality (exactly like CLI)
       const scaledViewport = {
         width: Math.round(
-          (width || maxViewport.width) * resolutionRatio! * MaxScaleValue
+          (width || maxViewport.width) * resolutionRatio * MaxScaleValue
         ),
         height: Math.round(
-          (height || maxViewport.height) * resolutionRatio! * MaxScaleValue
+          (height || maxViewport.height) * resolutionRatio * MaxScaleValue
         ),
       };
 
@@ -81,7 +81,7 @@ export class BrowserVideoGenerator {
       await this.createPlayerContainer();
 
       // Create player directly (like CLI creates browser page)
-      await this.createPlayer(events, rrwebPlayer, resolutionRatio!);
+      await this.createPlayer(events, rrwebPlayer, resolutionRatio);
 
       // Start recording
       const videoBlob = await this.recordVideo(onProgress);
@@ -101,6 +101,7 @@ export class BrowserVideoGenerator {
   private getMaxViewport(events: eventWithTime[]) {
     let maxWidth = 0;
     let maxHeight = 0;
+    // biome-ignore lint/complexity/noForEach: <explanation>
     events.forEach((event) => {
       if (event.type !== EventType.Meta) return;
       if (event.data.width > maxWidth) maxWidth = event.data.width;
@@ -232,6 +233,7 @@ export class BrowserVideoGenerator {
   private async captureFrames(
     onProgress?: (progress: number) => void
   ): Promise<void> {
+    // biome-ignore lint/suspicious/noAsyncPromiseExecutor: <explanation>
     return new Promise(async (resolve) => {
       let frameCount = 0;
       const maxFrames = 30 * 60; // 60 seconds max at 30 FPS
@@ -303,11 +305,7 @@ export class BrowserVideoGenerator {
       this.mediaRecorder.stop();
     }
 
-    if (this.player) {
-      this.player.destroy?.();
-    }
-
-    if (this.playerContainer && this.playerContainer.parentNode) {
+    if (this.playerContainer?.parentNode) {
       this.playerContainer.parentNode.removeChild(this.playerContainer);
     }
 

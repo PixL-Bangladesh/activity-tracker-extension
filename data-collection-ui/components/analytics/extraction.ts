@@ -384,7 +384,11 @@ export function extractStructuredData(events: eventWithTime[]) {
   });
 
   // Finalize the current task if it exists
-  if (currentTask?.steps && currentTask.steps.length > 0) {
+  if (
+    currentTask &&
+    (currentTask as unknown as TaskExample).steps &&
+    (currentTask as unknown as TaskExample).steps.length > 0
+  ) {
     structuredData.task_examples.push(currentTask as TaskExample);
   }
 
