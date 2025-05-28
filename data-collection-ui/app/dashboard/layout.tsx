@@ -1,3 +1,4 @@
+import { Sidebar } from "@/components/shared/sidebar";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -13,5 +14,10 @@ export default async function DashboardLayout({
     redirect("/auth");
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <Sidebar />
+      {children}
+    </>
+  );
 }

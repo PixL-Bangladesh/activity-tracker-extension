@@ -4,8 +4,6 @@ import type React from "react";
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Sidebar } from "@/components/shared/sidebar";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -22,8 +20,9 @@ import type { eventWithTime } from "rrweb";
 import { downloadFileFromBucket } from "@/actions/bucket";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
-import { printIfDev } from "@/utils/development/debug";
 import type { TaskEventBucketType } from "@/types/tasks";
+import { useVideoGenerator } from "@/utils/rrweb-cli/VideoGenHook";
+import { Button } from "@/components/ui/button";
 
 interface SessionData {
   session: Session;
@@ -42,6 +41,7 @@ export default function RecordingPage() {
   const [error, setError] = useState<string | null>(null);
   const [playerLoaded, setPlayerLoaded] = useState(false);
   const supabase = createClient();
+  const { generateVideo, isGenerating, progress } = useVideoGenerator();
 
   // Find the task
   useEffect(() => {
@@ -96,14 +96,14 @@ export default function RecordingPage() {
         filePath: `${userId}/${taskId}.json`,
       });
 
-      printIfDev({ errorObject: data });
+      // printIfDev({ errorObject: data });
 
       if (error) {
         toast.error("Failed to fetch recording data. Please try again.", {
           description: error.message,
         });
 
-        printIfDev(error);
+        // printIfDev(error);
 
         setError("Failed to fetch recording data. Please try again.");
         return;
@@ -120,9 +120,9 @@ export default function RecordingPage() {
             events: jsonData.events,
           });
 
-          printIfDev({
-            errorObject: jsonData,
-          });
+          // printIfDev({
+          //   errorObject: jsonData,
+          // });
         } catch (parseError) {
           console.error("Failed to parse JSON data:", parseError);
           toast.error("Failed to parse recording data", {
@@ -151,6 +151,21 @@ export default function RecordingPage() {
     fetchRecordingData();
   }, [taskId]);
 
+  const handleGenerateVideo = async () => {
+    if (!sessionData) return;
+
+    try {
+      await generateVideo({
+        events: sessionData.events,
+        width: 1280,
+        height: 720,
+        filename: `${sessionData.session.name}.webm`,
+      });
+    } catch (error) {
+      console.error("Failed to generate video:", error);
+    }
+  };
+
   return (
     <>
       <Script
@@ -162,7 +177,6 @@ export default function RecordingPage() {
         href="https://cdn.jsdelivr.net/npm/rrweb-player@2.0.0-alpha.18/dist/style.css"
       />
 
-      <Sidebar />
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-background">
         <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex h-14 items-center px-4 lg:px-8">
@@ -178,11 +192,21 @@ export default function RecordingPage() {
         <main className="flex-1 overflow-auto p-4 lg:p-6">
           {task ? (
             <div className="max-w-5xl mx-auto">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold mb-2">{task.label}</h2>
-                <p className="text-muted-foreground">
-                  {task.category} • {task.website} • {task.averageDuration}
-                </p>
+              <div className="mb-6 flex items-end">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">{task.label}</h2>
+                  <p className="text-muted-foreground">
+                    {task.category} • {task.website} • {task.averageDuration}
+                  </p>
+                </div>
+                <Button
+                  onClick={handleGenerateVideo}
+                  disabled={!sessionData || isGenerating}
+                >
+                  {isGenerating
+                    ? `Generating Video... ${Math.round(progress * 100)}%`
+                    : "Download Video"}
+                </Button>
               </div>
 
               {sessionData ? (

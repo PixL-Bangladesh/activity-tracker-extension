@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, CheckSquare, Camera, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  CheckSquare,
+  Camera,
+  LogOut,
+  ChartNoAxesCombined,
+} from "lucide-react";
 import { Button } from "../ui/button";
 import { logout } from "@/actions/auth";
 import { toast } from "sonner";
@@ -19,11 +25,16 @@ const sidebarItems = [
     icon: CheckSquare,
     href: "/dashboard/tasks",
   },
-  {
-    title: "Recordings",
-    icon: Camera,
-    href: "/dashboard/recordings",
-  },
+  // {
+  //   title: "Recordings",
+  //   icon: Camera,
+  //   href: "/dashboard/recordings",
+  // },
+  // {
+  //   title: "Analytics",
+  //   icon: ChartNoAxesCombined,
+  //   href: "/dashboard/analytics",
+  // },
 ];
 
 export function Sidebar() {

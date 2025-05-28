@@ -19,7 +19,13 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Clock, ExternalLink, Loader2 } from "lucide-react";
+import {
+  BarChart3,
+  CheckCircle,
+  Clock,
+  ExternalLink,
+  Loader2,
+} from "lucide-react";
 import type { TaskCategory, Task } from "@/lib/task-data";
 import { type TaskStatus, useTaskStatus } from "@/contexts/task-status-context";
 import { TaskAlertDialog } from "@/components/tasks/task-alert-dialog";
@@ -34,10 +40,9 @@ export function TaskCategoryPanel({
   category,
   defaultOpen,
 }: TaskCategoryPanelProps) {
-  const { taskStatuses, updateTaskStatus, isLoading } = useTaskStatus();
+  const { taskStatuses, isLoading } = useTaskStatus();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [alertOpen, setAlertOpen] = useState(false);
-  const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
 
   const getStatusBadge = (status: TaskStatus | undefined) => {
     switch (status) {
@@ -53,13 +58,6 @@ export function TaskCategoryPanel({
   const handleRowClick = (task: Task) => {
     setSelectedTask(task);
     setAlertOpen(true);
-  };
-
-  const handleMarkCompleted = async (e: React.MouseEvent, taskId: string) => {
-    e.stopPropagation();
-    setUpdatingTaskId(taskId);
-    await updateTaskStatus(taskId, "completed");
-    setUpdatingTaskId(null);
   };
 
   // Count completed tasks
@@ -164,22 +162,6 @@ export function TaskCategoryPanel({
                         </TableCell>
                         <TableCell>{task.website}</TableCell>
                         <TableCell>
-                          {taskStatuses[task.id] === "in-progress" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 gap-1"
-                              onClick={(e) => handleMarkCompleted(e, task.id)}
-                              disabled={updatingTaskId === task.id}
-                            >
-                              {updatingTaskId === task.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <CheckCircle className="h-4 w-4" />
-                              )}
-                              <span>Complete</span>
-                            </Button>
-                          )}
                           {taskStatuses[task.id] !== "in-progress" &&
                             taskStatuses[task.id] !== "completed" && (
                               <Button

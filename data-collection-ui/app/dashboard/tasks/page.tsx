@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sidebar } from "@/components/shared/sidebar";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,7 +74,6 @@ export default function TasksPage() {
 
   return (
     <>
-      <Sidebar />
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-background">
         <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex h-14 items-center px-4 lg:px-8">

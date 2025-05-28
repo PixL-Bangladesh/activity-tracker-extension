@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { Task } from "@/lib/task-data";
 import { useTaskStatus } from "@/contexts/task-status-context";
-import { InfoIcon, Loader2 } from "lucide-react";
+import { BarChart3, InfoIcon, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -123,19 +123,29 @@ export function TaskAlertDialog({
           <AlertDialogCancel disabled={isUpdating}>Cancel</AlertDialogCancel>
 
           {completionStatus ? (
-            <AlertDialogAction
-              onClick={handleViewRecording}
-              disabled={isUpdating}
-            >
-              {isUpdating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "View Recording"
-              )}
-            </AlertDialogAction>
+            <>
+              <AlertDialogAction
+                onClick={handleViewRecording}
+                disabled={isUpdating}
+              >
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "View Recording"
+                )}
+              </AlertDialogAction>
+              <AlertDialogAction
+                disabled={isUpdating}
+                onClick={() =>
+                  router.push(`/dashboard/analytics?taskId=${task.id}`)
+                }
+              >
+                <BarChart3 className="h-4 w-4" />
+              </AlertDialogAction>
+            </>
           ) : (
             <AlertDialogAction onClick={handleProceed} disabled={isUpdating}>
               {isUpdating ? (
