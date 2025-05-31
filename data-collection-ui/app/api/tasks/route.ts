@@ -4,6 +4,12 @@ import type { TaskEventBucketType } from "@/types/tasks";
 import { createClient } from "@/utils/supabase/server";
 import { NextResponse, type NextRequest } from "next/server";
 
+export const config = {
+  api: {
+    responseLimit: false,
+  },
+};
+
 export const POST = async (request: NextRequest) => {
   try {
     const sessionData = (await request.json()) as TaskEventBucketType;

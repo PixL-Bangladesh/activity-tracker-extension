@@ -6,9 +6,6 @@ export function isFirefox(): boolean {
   );
 }
 
-// Export dom-processor utilities
-export * from "./dom-processor";
-
 export function isInCrossOriginIFrame(): boolean {
   if (window.parent !== window) {
     try {

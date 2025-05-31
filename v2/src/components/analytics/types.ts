@@ -5,9 +5,7 @@ import type {
   scrollData, 
   viewportResizeData,
   MouseInteractions,
-  eventWithTime
 } from '@rrweb/types';
-import type { SessionAnalysis } from '~/utils/session-analyzer';
 
 export interface EventWithScreenshots {
   id: string;
@@ -169,7 +167,6 @@ export interface LLMTrainingData {
     timingMetrics: any;
     elementInteractions: any[];
   };
-  sessionAnalysis?: Partial<SessionAnalysis>;
 }
 
 // Interface for advanced analytics
