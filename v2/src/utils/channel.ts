@@ -1,29 +1,20 @@
-import mitt from 'mitt';
-import Browser, { type Runtime } from 'webextension-polyfill';
+import mitt from "mitt";
+import Browser, { type Runtime } from "webextension-polyfill";
 
 export type Message = EventType | ServiceType;
 export type EventType = {
-  type: 'event';
+  type: "event";
   event: string;
   detail: unknown;
 };
 export type ServiceType = {
-  type: 'service';
+  type: "service";
   service: string;
   params: unknown;
 };
 
 /**
  * Channel for inter-context communication.
- *
- * A chrome extension typically contains 4 types of context: background, popup, options and content scripts.
- * Communication between these contexts relies on
- * chrome.runtime.sendMessage and chrome.tabs.sendMessage.
- *
- * This Class provides two communication model:
- *   * request/response
- *   * event trigger/listen
- * based on chrome.runtime.sendMessage and chrome.tabs.sendMessage.
  */
 class Channel {
   private services = new Map<
@@ -31,10 +22,8 @@ class Channel {
     (params: unknown, sender: Runtime.MessageSender) => Promise<unknown>
   >();
   private emitter = mitt();
+
   constructor() {
-    /**
-     * Register message listener.
-     */
     Browser.runtime.onMessage.addListener(
       ((message: string, sender: Runtime.MessageSender) => {
         const parsed = JSON.parse(message) as Message | null | undefined;
@@ -43,38 +32,31 @@ class Channel {
           return;
         }
         switch (parsed.type) {
-          case 'event':
+          case "event":
             this.emitter.emit(parsed.event, { detail: parsed.detail, sender });
             break;
-          case 'service': {
+          case "service": {
             const server = this.services.get(parsed.service);
             if (!server) break;
             return server(parsed.params, sender);
           }
           default:
             console.error(
-              `Unknown message type: ${(parsed as { type: string }).type}`,
+              `Unknown message type: ${(parsed as { type: string }).type}`
             );
             break;
         }
         return;
-      }).bind(this),
+      }).bind(this)
     );
   }
 
-  /**
-   * Provide a service.
-   *
-   * @param serviceName - the name of the service, acts like a URL
-   * @param serveFunction - a function to provide the service when a consumer request this service.
-   * @returns a function to remove the service
-   */
   public provide(
     serviceName: string,
     serveFunction: (
       params: unknown,
-      sender: Runtime.MessageSender,
-    ) => Promise<unknown>,
+      sender: Runtime.MessageSender
+    ) => Promise<unknown>
   ): () => void {
     this.services.set(serviceName, serveFunction);
     return () => {
@@ -82,42 +64,27 @@ class Channel {
     };
   }
 
-  /**
-   * Send a request and get a response.
-   *
-   * @param service - service name to request
-   * @param params - request parameters
-   * @returns service data
-   */
   public request(
     serviceName: string,
-    params: Record<string, unknown> | unknown,
+    params: Record<string, unknown> | unknown
   ) {
     const message = JSON.stringify({
-      type: 'service',
+      type: "service",
       service: serviceName,
       params,
     });
     return Browser.runtime.sendMessage(message);
   }
 
-  /**
-   * Send a request to the specified tab and get a response.
-   *
-   * @param tabId - tab id
-   * @param service - service name to request
-   * @param params - request parameters
-   * @returns service data
-   */
   public requestToTab(
     tabId: number,
     serviceName: string,
-    params: Record<string, unknown> | unknown,
+    params: Record<string, unknown> | unknown
   ) {
     if (!Browser.tabs || !Browser.tabs.sendMessage)
-      return Promise.reject('Can not send message to tabs in current context!');
+      return Promise.reject("Can not send message to tabs in current context!");
     const message = JSON.stringify({
-      type: 'service',
+      type: "service",
       service: serviceName,
       params,
     });
@@ -126,54 +93,41 @@ class Channel {
 
   /**
    * Add an event handler.
-   *
-   * @param eventName - event name
-   * @param handler - event handler, accepts two arguments:
-   *                           detail: event detail
-   *                           source: source of the event, Browser.runtime.MessageSender object
    * @returns a function to remove the handler
    */
   public on(
     event: string,
-    handler: (detail: unknown, sender: Runtime.MessageSender) => unknown,
-  ) {
+    handler: (detail: unknown, sender: Runtime.MessageSender) => unknown
+  ): () => void {
     const emitHandler = ((data: {
       detail: unknown;
       sender: Runtime.MessageSender;
     }) => {
       handler(data.detail, data.sender);
     }) as (data: unknown) => unknown;
-    return this.emitter.on(event, emitHandler);
+
+    this.emitter.on(event, emitHandler);
+
+    // Return cleanup function
+    return () => {
+      this.emitter.off(event, emitHandler);
+    };
   }
 
-  /**
-   * Emit an event.
-   *
-   * @param event - event name
-   * @param detail - event detail
-   */
   public emit(event: string, detail: unknown) {
-    const message = JSON.stringify({ type: 'event', event, detail });
-    void Browser.runtime.sendMessage(message);
+    const message = JSON.stringify({ type: "event", event, detail });
+    return Browser.runtime.sendMessage(message);
   }
 
-  /**
-   * Emit an event to specified tabs.
-   *
-   * @param tabIds - tab ids
-   * @param event - event name
-   * @param detail - event detail
-   */
   public emitToTabs(tabIds: number | number[], event: string, detail: unknown) {
     if (!Browser.tabs || !Browser.tabs.sendMessage)
-      return Promise.reject('Can not send message to tabs in current context!');
+      return Promise.reject("Can not send message to tabs in current context!");
 
-    // If tabIds is a number, wrap it up with an array.
-    if (typeof tabIds === 'number') {
+    if (typeof tabIds === "number") {
       tabIds = [tabIds];
     }
 
-    const message = JSON.stringify({ type: 'event', event, detail });
+    const message = JSON.stringify({ type: "event", event, detail });
     tabIds.forEach((tabId) => void Browser.tabs.sendMessage(tabId, message));
   }
 

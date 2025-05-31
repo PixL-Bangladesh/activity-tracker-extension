@@ -54,9 +54,9 @@ function getExtensionVersion(rrwebVersion: string): string {
     // If it's a pre-release version like alpha or beta, strip the pre-release identifier
     return `${parsedVersion.major}.${parsedVersion.minor}.${parsedVersion.patch
       }.${parsedVersion.prerelease[1] || 0}`;
-  } else if (rrwebVersion === '2.0.0') {
+  } else if (rrwebVersion === '1.0.0') {
     // This version has already been released as the first version. We need to add a patch version to it to avoid publishing conflicts.
-    return '2.0.0.100';
+    return '1.0.0.0';
   } else {
     return rrwebVersion;
   }

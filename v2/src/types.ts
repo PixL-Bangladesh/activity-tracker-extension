@@ -1,7 +1,7 @@
-import type { eventWithTime } from '@rrweb/types';
+import type { eventWithTime } from "@rrweb/types";
 
 export enum SyncDataKey {
-  settings = 'settings',
+  settings = "settings",
 }
 
 export type SyncData = {
@@ -13,7 +13,7 @@ export type Settings = {
 };
 
 export enum LocalDataKey {
-  recorderStatus = 'recorder_status',
+  recorderStatus = "recorder_status",
 }
 
 export type LocalData = {
@@ -28,11 +28,11 @@ export type LocalData = {
 };
 
 export enum RecorderStatus {
-  IDLE = 'IDLE',
-  RECORDING = 'RECORDING',
-  PAUSED = 'PAUSED',
+  IDLE = "IDLE",
+  RECORDING = "RECORDING",
+  PAUSED = "PAUSED",
   // when user change the tab, the recorder will be paused during the tab change
-  PausedSwitch = 'PAUSED_SWITCH',
+  PausedSwitch = "PAUSED_SWITCH",
 }
 
 export type Session = {
@@ -46,28 +46,33 @@ export type Session = {
 
 // all service names for channel
 export enum ServiceName {
-  StartRecord = 'start-record',
-  StopRecord = 'stop-record',
+  StartRecord = "start-record",
+  StopRecord = "stop-record",
 }
 
 // all event names for channel
 export enum EventName {
-  SessionUpdated = 'session-updated',
-  ContentScriptEmitEvent = 'content-script-emit-event',
-  StartButtonClicked = 'start-recording-button-clicked',
-  StopButtonClicked = 'stop-recording-button-clicked',
-  PauseButtonClicked = 'pause-recording-button-clicked',
-  ResumeButtonClicked = 'resume-recording-button-clicked',
+  SessionUpdated = "session-updated",
+  ContentScriptEmitEvent = "content-script-emit-event",
+  StartButtonClicked = "start-recording-button-clicked",
+  StopButtonClicked = "stop-recording-button-clicked",
+  PauseButtonClicked = "pause-recording-button-clicked",
+  ResumeButtonClicked = "resume-recording-button-clicked",
+  AuthStatusChanged = "auth-status-changed",
+  AuthStatusRequested = "auth-status-requested",
+  UploadingStarted = "uploading-started",
+  UploadingFinished = "uploading-finished",
+  UploadingFailed = "uploading-failed",
 }
 
 // all message names for postMessage API
 export enum MessageName {
-  RecordScriptReady = 'ScreenTrail-extension-record-script-ready',
-  StartRecord = 'ScreenTrail-extension-start-record',
-  RecordStarted = 'ScreenTrail-extension-record-started',
-  StopRecord = 'ScreenTrail-extension-stop-record',
-  RecordStopped = 'ScreenTrail-extension-record-stopped',
-  EmitEvent = 'ScreenTrail-extension-emit-event',
+  RecordScriptReady = "ScreenTrail-extension-record-script-ready",
+  StartRecord = "ScreenTrail-extension-start-record",
+  RecordStarted = "ScreenTrail-extension-record-started",
+  StopRecord = "ScreenTrail-extension-stop-record",
+  RecordStopped = "ScreenTrail-extension-record-stopped",
+  EmitEvent = "ScreenTrail-extension-emit-event",
 }
 
 export type RecordStartedMessage = {
@@ -87,7 +92,7 @@ export type EmitEventMessage = {
 
 // Add new tracking types
 export interface NetworkRequest {
-  type: 'xhr' | 'fetch';
+  type: "xhr" | "fetch";
   url: string;
   method: string;
   startTime: number;
@@ -142,17 +147,23 @@ export interface ConsoleLogData {
 
 // Custom event types for our enhanced tracking
 export enum CustomEventType {
-  Network = 'network',
-  Metadata = 'metadata',
-  MouseClick = 'mouseClick',
-  Keypress = 'keypress',
-  ConsoleLog = 'consoleLog',
-  InputChange = 'inputChange',
-  DOMSnapshot = 'domSnapshot'
+  Network = "network",
+  Metadata = "metadata",
+  MouseClick = "mouseClick",
+  Keypress = "keypress",
+  ConsoleLog = "consoleLog",
+  InputChange = "inputChange",
+  DOMSnapshot = "domSnapshot",
 }
 
 export interface CustomEvent {
   type: CustomEventType;
-  data: NetworkRequest | EnvironmentMetadata | MouseClickData | KeypressData | ConsoleLogData | InputChangeData;
+  data:
+    | NetworkRequest
+    | EnvironmentMetadata
+    | MouseClickData
+    | KeypressData
+    | ConsoleLogData
+    | InputChangeData;
   timestamp: number;
 }

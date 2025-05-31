@@ -19,37 +19,163 @@ import type {
   SyncData,
 } from "~/types";
 import { isFirefox } from "~/utils";
-import { addSession } from "~/utils/storage";
-import { getAuthInfo } from "~/utils/auth";
+import { getAuthInfo, getAuthStatus } from "~/utils/auth";
 import { getInProgressTaskId } from "~/utils/tasks";
 import { AXIOS } from "~/lib/axios";
 
 void (async () => {
+  const channel = new Channel();
+  // auth status
+  let authStatus: {
+    isAuthenticated: boolean;
+    userId: string | null;
+    email: string | null;
+    taskId: string | null;
+  } = {
+    isAuthenticated: false,
+    userId: null,
+    email: null,
+    taskId: null,
+  };
+
+  // Upload status tracking
+  let isUploading = false;
+
+  // initialize auth status
+  const initializeAuthStatus = async () => {
+    try {
+      console.log("Initializing auth status...");
+
+      // Get auth status first
+      const isAuth = await getAuthStatus();
+      console.log("Auth status:", isAuth);
+
+      if (isAuth) {
+        try {
+          // Get user info and task ID in parallel
+          const [authInfo, taskId] = await Promise.all([
+            getAuthInfo(),
+            getInProgressTaskId().catch(() => null), // Don't fail if no task
+          ]);
+
+          authStatus = {
+            isAuthenticated: true,
+            userId: authInfo.userId,
+            email: authInfo.email,
+            taskId: taskId || null,
+          };
+
+          console.log("Auth initialized successfully:", authStatus);
+        } catch (error) {
+          console.error("Error getting auth details:", error);
+          // Keep authenticated but clear other data
+          authStatus = {
+            isAuthenticated: true,
+            userId: null,
+            email: null,
+            taskId: null,
+          };
+        }
+      } else {
+        authStatus = {
+          isAuthenticated: false,
+          userId: null,
+          email: null,
+          taskId: null,
+        };
+        console.log("User not authenticated");
+      }
+
+      // Always emit status change
+      channel.emit(EventName.AuthStatusChanged, authStatus);
+      console.log("Auth status emitted:", authStatus);
+    } catch (error) {
+      console.error("Failed to initialize auth status:", error);
+      authStatus = {
+        isAuthenticated: false,
+        userId: null,
+        email: null,
+        taskId: null,
+      };
+      channel.emit(EventName.AuthStatusChanged, authStatus);
+    }
+  };
+
+  // Handle auth status requests
+  channel.on(EventName.AuthStatusRequested, async () => {
+    console.log("Auth status requested, refreshing...");
+    await initializeAuthStatus();
+  });
+
+  // Provide auth status service
+  channel.provide("getAuthStatus", async () => {
+    console.log("Auth status service called, current status:", authStatus);
+
+    // If status is stale or empty, refresh it
+    if (!authStatus.isAuthenticated && !authStatus.userId) {
+      console.log("Status seems stale, refreshing...");
+      await initializeAuthStatus();
+    }
+
+    return authStatus;
+  });
+
+  // Periodically check auth status with better logic
+  setInterval(async () => {
+    const previousAuth = authStatus.isAuthenticated;
+    const previousTaskId = authStatus.taskId;
+
+    try {
+      await initializeAuthStatus();
+
+      // Only emit if something actually changed
+      if (
+        previousAuth !== authStatus.isAuthenticated ||
+        previousTaskId !== authStatus.taskId
+      ) {
+        console.log("Auth status changed during periodic check");
+        channel.emit(EventName.AuthStatusChanged, authStatus);
+      }
+    } catch (error) {
+      console.error("Error during periodic auth check:", error);
+    }
+  }, 5000); // Check every 5 seconds
+
+  // Initialize auth status on extension load
+  console.log("Extension starting, initializing auth...");
+  await initializeAuthStatus();
+
   // assign default value to settings of this extension
   const result =
     ((await Browser.storage.sync.get(SyncDataKey.settings)) as SyncData) ||
     undefined;
+
   const defaultSettings: Settings = {};
+
   let settings = defaultSettings;
+
   if (result && result.settings) {
     setDefaultSettings(result.settings, defaultSettings);
     settings = result.settings;
   }
+
   await Browser.storage.sync.set({
     settings,
   } as SyncData);
 
   const events: eventWithTime[] = [];
-  const channel = new Channel();
+
   let recorderStatus: LocalData[LocalDataKey.recorderStatus] = {
     status: RecorderStatus.IDLE,
     activeTabId: -1,
   };
+
   // Reset recorder status when the extension is reloaded.
   await Browser.storage.local.set({
     [LocalDataKey.recorderStatus]: recorderStatus,
   });
 
+  // Listen to the start recording events.
   channel.on(EventName.StartButtonClicked, async () => {
     if (recorderStatus.status !== RecorderStatus.IDLE) return;
     recorderStatus = {
@@ -72,7 +198,9 @@ void (async () => {
           [LocalDataKey.recorderStatus]: recorderStatus,
         });
       })) as RecordStartedMessage;
+
     if (!res) return;
+
     Object.assign(recorderStatus, {
       status: RecorderStatus.RECORDING,
       activeTabId: tabId,
@@ -83,6 +211,7 @@ void (async () => {
     });
   });
 
+  // Listen to the stop recording events with better task ID handling
   channel.on(EventName.StopButtonClicked, async () => {
     if (recorderStatus.status === RecorderStatus.IDLE) return;
 
@@ -93,13 +222,16 @@ void (async () => {
           message: MessageName.RecordStopped,
           endTimestamp: Date.now(),
         }))) as RecordStoppedMessage;
+
     recorderStatus = {
       status: RecorderStatus.IDLE,
       activeTabId: -1,
     };
+
     await Browser.storage.local.set({
       [LocalDataKey.recorderStatus]: recorderStatus,
     });
+
     const title =
       (await Browser.tabs
         .query({ active: true, currentWindow: true })
@@ -107,30 +239,56 @@ void (async () => {
         .catch(() => {
           // ignore error
         })) ?? "new session";
+
     const newSession = generateSession(title);
-    // await addSession(newSession, events).catch((e) => {
-    //   recorderStatus.errorMessage = (e as { message: string }).message;
-    //   void Browser.storage.local.set({
-    //     [LocalDataKey.recorderStatus]: recorderStatus,
-    //   });
-    // });
 
-    // send to server
-    const userInfo = await getAuthInfo();
-    const taskId = await getInProgressTaskId();
-    await AXIOS.post("/tasks", {
-      userId: userInfo.userId,
-      taskId,
-      events,
-      session: newSession,
-    });
+    // Emit uploading started
+    isUploading = true;
+    channel.emit(EventName.UploadingStarted, {});
 
-    channel.emit(EventName.SessionUpdated, {
-      session: newSession,
-    });
-    events.length = 0;
+    try {
+      // Get fresh auth info and task ID
+      const [userInfo, taskId] = await Promise.all([
+        getAuthInfo(),
+        getInProgressTaskId(),
+      ]);
+
+      console.log("Uploading with taskId:", taskId);
+
+      await AXIOS.post("/tasks", {
+        userId: userInfo.userId,
+        taskId,
+        events,
+        session: newSession,
+      });
+
+      // Clear taskId after successful upload and refresh auth status
+      await initializeAuthStatus(); // This will update taskId
+
+      channel.emit(EventName.UploadingFinished, { session: newSession });
+      channel.emit(EventName.SessionUpdated, { session: newSession });
+
+      console.log("Upload successful, auth status refreshed");
+    } catch (error) {
+      console.error("Upload failed:", error);
+      channel.emit(EventName.UploadingFailed, {
+        error: error instanceof Error ? error.message : "Upload failed",
+      });
+      recorderStatus.errorMessage =
+        error instanceof Error ? error.message : "Upload failed";
+      await Browser.storage.local.set({
+        [LocalDataKey.recorderStatus]: recorderStatus,
+      });
+    } finally {
+      isUploading = false;
+      events.length = 0;
+    }
   });
 
+  /**
+   * Pause the recording in the current tab.
+   * @param newStatus - the new status of the recorder after pausing
+   */
   async function pauseRecording(newStatus: RecorderStatus) {
     if (
       recorderStatus.status !== RecorderStatus.RECORDING ||
@@ -157,6 +315,10 @@ void (async () => {
     await pauseRecording(RecorderStatus.PAUSED);
   });
 
+  /**
+   * Resume the recording in the new tab.
+   * @param newTabId - the id of the new tab to resume recording
+   */
   async function resumeRecording(newTabId: number) {
     if (
       ![RecorderStatus.PAUSED, RecorderStatus.PausedSwitch].includes(
@@ -200,7 +362,7 @@ void (async () => {
       [LocalDataKey.recorderStatus]: recorderStatus,
     });
   }
-  
+
   channel.on(EventName.ResumeButtonClicked, async () => {
     if (recorderStatus.status !== RecorderStatus.PAUSED) return;
     recorderStatus.errorMessage = undefined;
@@ -279,7 +441,7 @@ function setDefaultSettings(
     // settings[i] contains key-value settings
     if (
       typeof newSettings[i] === "object" &&
-      !(Array.isArray(newSettings[i])) &&
+      !Array.isArray(newSettings[i]) &&
       Object.keys(newSettings[i] as Record<string, unknown>).length > 0
     ) {
       if (existedSettings[i]) {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Browser from "webextension-polyfill";
-import { ListIcon, Settings, Pause, Play } from "lucide-react";
+import { ListIcon, Pause, Play, Loader2 } from "lucide-react";
 import Channel from "~/utils/channel";
 import { LocalDataKey, RecorderStatus, EventName } from "~/types";
 import type { LocalData, Session } from "~/types";
@@ -9,11 +9,11 @@ import { CircleButton } from "~/components/ui/circle-button";
 import { Timer } from "~/components/ui/timer";
 import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
-import { getAuthStatus } from "~/utils/auth";
-import { getInProgressTaskId } from "~/utils/tasks";
 import { config } from "~/config";
+// Fix the import path - use lowercase 'auth-channel'
+import { useAuthChannel, type AuthStatus } from "~/utils/auth-channel";
 
-const RECORD_BUTTON_SIZE = 3;
+const RECORD_BUTTON_SIZE = 4;
 const channel = new Channel();
 
 export function App() {
@@ -24,40 +24,85 @@ export function App() {
   const [connectionError, setConnectionError] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [taskId, setTaskId] = useState<string | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const fetchAuthStatus = async () => {
-    try {
-      const response = await getAuthStatus();
-      if (response) {
-        setIsAuthenticated(true);
-      } else {
-        setIsAuthenticated(false);
-        toast.error("You are not logged in");
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        toast.error("Error fetching authentication status");
-        console.error("Error fetching authentication status:", error);
-      }
-    }
-  };
-
-  const fetchInProgressTaskId = async () => {
-    try {
-      const response = await getInProgressTaskId();
-      if (response) {
-        if (response.trim() === "") {
-          setTaskId(null);
-        } else {
-          setTaskId(response);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching in-progress task ID:", error);
-    }
-  };
+  const { requestAuthStatus, onAuthStatusChange, refreshAuthStatus } =
+    useAuthChannel();
 
   useEffect(() => {
+    const initializeAuth = async () => {
+      setIsLoadingAuth(true);
+      try {
+        console.log("Popup: Requesting auth status...");
+        const authStatus = await requestAuthStatus();
+        console.log("Popup: Received auth status:", authStatus);
+        handleAuthStatusUpdate(authStatus);
+      } catch (error) {
+        console.error("Popup: Error initializing auth:", error);
+        toast.error("Error loading authentication status");
+      } finally {
+        setIsLoadingAuth(false);
+      }
+    };
+
+    const handleAuthStatusUpdate = (authData: AuthStatus) => {
+      console.log("Popup: Handling auth status update:", authData);
+      setIsAuthenticated(authData.isAuthenticated);
+      setTaskId(authData.taskId);
+
+      if (!authData.isAuthenticated) {
+        setStatus(RecorderStatus.IDLE);
+        setStartTime(0);
+        setNewSession(null);
+        setErrorMessage("Not authenticated");
+      } else {
+        // Clear error message when authenticated
+        setErrorMessage("");
+      }
+    };
+
+    // Listen for auth status changes
+    // Listen for auth status changes
+    const removeAuthListener = onAuthStatusChange(handleAuthStatusUpdate);
+
+    // Listen for upload status
+    const removeUploadStartListener = channel.on(
+      EventName.UploadingStarted,
+      () => {
+        setIsUploading(true);
+        toast.info("Uploading recording...");
+      }
+    );
+
+    const removeUploadFinishListener = channel.on(
+      EventName.UploadingFinished,
+      async (data) => {
+        setIsUploading(false);
+        const sessionData = data as { session: Session };
+        setNewSession(sessionData.session);
+        toast.success("Recording uploaded successfully!");
+
+        // Refresh auth status to get updated taskId
+        console.log("Popup: Upload finished, refreshing auth status...");
+        try {
+          const updatedAuth = await refreshAuthStatus();
+          handleAuthStatusUpdate(updatedAuth);
+        } catch (error) {
+          console.error("Error refreshing auth after upload:", error);
+        }
+      }
+    );
+
+    const removeUploadFailListener = channel.on(
+      EventName.UploadingFailed,
+      (data) => {
+        setIsUploading(false);
+        const errorData = data as { error: string };
+        toast.error(`Upload failed: ${errorData.error}`);
+      }
+    );
+
     const parseStatusData = (data: LocalData[LocalDataKey.recorderStatus]) => {
       const { status, startTimestamp, pausedTimestamp } = data;
       setStatus(status);
@@ -71,17 +116,22 @@ export function App() {
       parseStatusData((data as LocalData)[LocalDataKey.recorderStatus]);
     });
 
-    void Browser.storage.local.onChanged.addListener((changes) => {
+    const storageChangeListener = (changes: { [key: string]: any }) => {
       if (!changes[LocalDataKey.recorderStatus]) return;
       const data = changes[LocalDataKey.recorderStatus]
         .newValue as LocalData[LocalDataKey.recorderStatus];
       parseStatusData(data);
       if (data.errorMessage) setErrorMessage(data.errorMessage);
-    });
+    };
 
-    channel.on(EventName.SessionUpdated, (data) => {
-      setNewSession((data as { session: Session }).session);
-    });
+    Browser.storage.local.onChanged.addListener(storageChangeListener);
+
+    const removeSessionUpdateListener = channel.on(
+      EventName.SessionUpdated,
+      (data) => {
+        setNewSession((data as { session: Session }).session);
+      }
+    );
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       if (
@@ -96,17 +146,33 @@ export function App() {
 
     window.addEventListener("unhandledrejection", handleUnhandledRejection);
 
+    // Initialize auth
+    void initializeAuth();
+
     return () => {
+      // Call the cleanup functions properly
+      if (typeof removeAuthListener === "function") {
+        removeAuthListener();
+      }
+      if (typeof removeUploadStartListener === "function") {
+        removeUploadStartListener();
+      }
+      if (typeof removeUploadFinishListener === "function") {
+        removeUploadFinishListener();
+      }
+      if (typeof removeUploadFailListener === "function") {
+        removeUploadFailListener();
+      }
+      if (typeof removeSessionUpdateListener === "function") {
+        removeSessionUpdateListener();
+      }
+
+      Browser.storage.local.onChanged.removeListener(storageChangeListener);
       window.removeEventListener(
         "unhandledrejection",
         handleUnhandledRejection
       );
     };
-  }, []);
-
-  useEffect(() => {
-    fetchAuthStatus();
-    fetchInProgressTaskId();
   }, []);
 
   const safeEmit = async (eventName: EventName, data: unknown) => {
@@ -145,6 +211,16 @@ export function App() {
     }
   };
 
+  // Show loading indicator while authenticating
+  if (isLoadingAuth) {
+    return (
+      <div className="flex flex-col w-[300px] h-[300px] p-[5%] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="text-sm text-gray-600 mt-2">Loading...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col w-[300px] h-[300px] p-[5%]">
       <div className="flex">
@@ -154,7 +230,7 @@ export function App() {
           {isAuthenticated && (
             <Button
               onClick={() => {
-                void Browser.tabs.create({ url: "/pages/index.html#/" });
+                window.open(`${config.SITE_URL}/dashboard/tasks`, "_blank");
               }}
               size="sm"
               variant="ghost"
@@ -165,18 +241,6 @@ export function App() {
               <span className="sr-only">Session List</span>
             </Button>
           )}
-          <Button
-            onClick={() => {
-              void Browser.runtime.openOptionsPage();
-            }}
-            size="sm"
-            variant="ghost"
-            className="h-8 w-8 p-0"
-            title="Settings"
-          >
-            <Settings className="h-4 w-4" />
-            <span className="sr-only">Settings</span>
-          </Button>
         </div>
       </div>
 
@@ -188,9 +252,9 @@ export function App() {
       )}
 
       {isAuthenticated ? (
-        <div className="flex justify-center gap-10 mt-5 mb-5">
+        <div className="flex justify-center items-center gap-10 mt-5 mb-5">
           <CircleButton
-            disabled={taskId === null}
+            disabled={taskId === null || isUploading}
             diameter={RECORD_BUTTON_SIZE}
             title={
               status === RecorderStatus.IDLE
@@ -203,16 +267,20 @@ export function App() {
               )
             }
           >
-            <div
-              style={{
-                width: `${RECORD_BUTTON_SIZE}rem`,
-                height: `${RECORD_BUTTON_SIZE}rem`,
-                margin: 0,
-                backgroundColor: "rgb(239, 68, 68)", // red-500
-                borderRadius:
-                  status === RecorderStatus.IDLE ? "9999px" : "0.375rem",
-              }}
-            />
+            {isUploading ? (
+              <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+            ) : (
+              <div
+                style={{
+                  width: `${RECORD_BUTTON_SIZE}rem`,
+                  height: `${RECORD_BUTTON_SIZE}rem`,
+                  margin: 0,
+                  backgroundColor: "rgb(239, 68, 68)", // red-500
+                  borderRadius:
+                    status === RecorderStatus.IDLE ? "9999px" : "0.375rem",
+                }}
+              />
+            )}
           </CircleButton>
 
           {status !== RecorderStatus.IDLE && (
@@ -229,20 +297,17 @@ export function App() {
                 )
               }
             >
-              <div
-                style={{
-                  width: `${RECORD_BUTTON_SIZE}rem`,
-                  height: `${RECORD_BUTTON_SIZE}rem`,
-                  borderRadius: "9999px",
-                  margin: 0,
-                  color: "rgb(75, 85, 99)", // gray-600
-                }}
-              >
+              <div className="flex items-center justify-center w-full h-full">
                 {[RecorderStatus.PAUSED, RecorderStatus.PausedSwitch].includes(
                   status
-                ) && <Play className="pl-2 w-full h-full" />}
+                ) && (
+                  <Play
+                    className="h-6 w-6 text-gray-600"
+                    style={{ marginLeft: "2px" }}
+                  />
+                )}
                 {status === RecorderStatus.RECORDING && (
-                  <Pause className="w-full h-full" />
+                  <Pause className="h-6 w-6 text-gray-600" />
                 )}
               </div>
             </CircleButton>
@@ -306,7 +371,6 @@ export function App() {
             variant="outline"
             className="w-full text-red-600 border-red-200 hover:bg-red-100"
             onClick={() => {
-              // Attempt to refresh the active tab
               Browser.tabs
                 .query({ active: true, currentWindow: true })
                 .then((tabs) => {
@@ -318,7 +382,6 @@ export function App() {
                   setConnectionError(false);
                 })
                 .catch(() => {
-                  // If we can't reload the tab, at least reset the error state
                   setConnectionError(false);
                 });
             }}
