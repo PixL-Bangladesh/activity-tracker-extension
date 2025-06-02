@@ -22,6 +22,7 @@ import { motion } from "framer-motion";
 import { contentVariants } from "@/constants/animate";
 import { login } from "@/actions/auth";
 import { toast } from "sonner";
+import { useErrorHandler } from "@/lib/handle-error";
 
 // Define the form schema with Zod
 const loginFormSchema = z.object({
@@ -38,6 +39,7 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { handleError } = useErrorHandler();
 
   // Initialize the form with default values and the zod resolver
   const form = useForm<LoginFormValues>({
@@ -59,11 +61,7 @@ const LoginForm = () => {
         rememberMe: data.rememberMe,
       });
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "An error occurred";
-      toast.error(message, {
-        description: "Please try again.",
-      });
+      handleError(error as Error, "Login failed");
     } finally {
       setLoading(false);
     }

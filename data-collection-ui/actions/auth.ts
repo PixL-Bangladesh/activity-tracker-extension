@@ -29,16 +29,8 @@ export async function login(authData: AuthData) {
     data
   );
 
-  // printIfDev({
-  //   errorObject: {
-  //     user: userData,
-  //     error,
-  //   },
-  //   message: "Login error",
-  // });
-
   if (error) {
-    redirect("/error");
+    throw error;
   }
 
   const existingUser = await supabase
@@ -47,11 +39,6 @@ export async function login(authData: AuthData) {
     .eq("email", authData.email)
     .limit(1)
     .single();
-
-  // printIfDev({
-  //   errorObject: existingUser.error,
-  //   message: "Existing user data",
-  // });
 
   if (!existingUser.data) {
     const name = userData.user.user_metadata.fullName as string;

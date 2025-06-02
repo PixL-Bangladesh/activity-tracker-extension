@@ -5,10 +5,12 @@ import {
   type VideoGenerationConfig,
 } from "@/utils/rrweb-cli/Videogenerator";
 import { toast } from "sonner";
+import { useErrorHandler } from "@/lib/handle-error";
 
 export function useVideoGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
+  const { handleError } = useErrorHandler();
 
   const generateVideo = async (
     config: Omit<VideoGenerationConfig, "onProgress" | "onComplete" | "onError">
@@ -45,6 +47,7 @@ export function useVideoGenerator() {
       return videoBlob;
     } catch (error) {
       console.error("Video generation failed:", error);
+      handleError(error as Error, "Video generation failed");
       throw error;
     } finally {
       setIsGenerating(false);

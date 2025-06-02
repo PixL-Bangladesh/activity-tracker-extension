@@ -15,6 +15,7 @@ import { BarChart3, InfoIcon, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Button } from "../ui/button";
 
 interface TaskAlertDialogProps {
   task: Task | null;
@@ -22,6 +23,7 @@ interface TaskAlertDialogProps {
   onOpenChange: (open: boolean) => void;
   completionStatus: boolean;
   totalInProgressCount: number;
+  isInProgress?: boolean;
 }
 
 export function TaskAlertDialog({
@@ -30,6 +32,7 @@ export function TaskAlertDialog({
   onOpenChange,
   completionStatus,
   totalInProgressCount,
+  isInProgress = false,
 }: TaskAlertDialogProps) {
   const { updateTaskStatus } = useTaskStatus();
   const router = useRouter();
@@ -38,7 +41,8 @@ export function TaskAlertDialog({
   const handleProceed = async () => {
     if (totalInProgressCount > 0) {
       toast.warning(
-        "You have another task in progress. Please complete it before starting a new one."
+        `You have another task in progress. Please complete it or 
+        stop the progress before starting a new one.`
       );
       return;
     }
@@ -147,16 +151,31 @@ export function TaskAlertDialog({
               </AlertDialogAction>
             </>
           ) : (
-            <AlertDialogAction onClick={handleProceed} disabled={isUpdating}>
-              {isUpdating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "Proceed to Website"
+            <>
+              <AlertDialogAction onClick={handleProceed} disabled={isUpdating}>
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Proceed to Website"
+                )}
+              </AlertDialogAction>
+              {isInProgress && (
+                <AlertDialogAction
+                  className="bg-destructive hover:bg-chart-5 h-8 gap-1"
+                  onClick={async () => {
+                    await updateTaskStatus(task.id, "not-started");
+                    onOpenChange(false);
+                    toast.success("Task stopped successfully");
+                  }}
+                >
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Stop task</span>
+                </AlertDialogAction>
               )}
-            </AlertDialogAction>
+            </>
           )}
         </AlertDialogFooter>
       </AlertDialogContent>

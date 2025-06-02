@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import type { TaskEventBucketType } from "@/types/tasks";
 import { useVideoGenerator } from "@/utils/rrweb-cli/VideoGenHook";
 import { Button } from "@/components/ui/button";
+import { useErrorHandler } from "@/lib/handle-error";
 
 interface SessionData {
   session: Session;
@@ -42,6 +43,7 @@ export default function RecordingPage() {
   const [playerLoaded, setPlayerLoaded] = useState(false);
   const supabase = createClient();
   const { generateVideo, isGenerating, progress } = useVideoGenerator();
+  const { handleError } = useErrorHandler();
 
   // Find the task
   useEffect(() => {
@@ -135,11 +137,7 @@ export default function RecordingPage() {
         }
       }
     } catch (error) {
-      const _error =
-        error instanceof Error ? error : new Error("Unknown error");
-      toast.error("An error occured while fetching the data from the bucket", {
-        description: _error.message,
-      });
+      handleError(error as Error, "Failed to fetch recording data");
       setError("Failed to fetch recording data. Please try again.");
     } finally {
       setIsLoading(false);
@@ -163,6 +161,7 @@ export default function RecordingPage() {
       });
     } catch (error) {
       console.error("Failed to generate video:", error);
+      handleError(error as Error, "Failed to generate video from recording");
     }
   };
 

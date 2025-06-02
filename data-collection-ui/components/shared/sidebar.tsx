@@ -3,16 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  CheckSquare,
-  Camera,
-  LogOut,
-  ChartNoAxesCombined,
-} from "lucide-react";
+import { LayoutDashboard, CheckSquare, LogOut } from "lucide-react";
 import { Button } from "../ui/button";
 import { logout } from "@/actions/auth";
 import { toast } from "sonner";
+import { useErrorHandler } from "@/lib/handle-error";
 
 const sidebarItems = [
   {
@@ -39,15 +34,13 @@ const sidebarItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { handleError } = useErrorHandler();
 
   const handleLogout = async () => {
     try {
       await logout();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Logout failed";
-      toast.error(message, {
-        description: "You are logged out either way.",
-      });
+      handleError(error as Error, "Logout failed");
     }
   };
 
@@ -76,7 +69,7 @@ export function Sidebar() {
                   className={cn(
                     "flex items-center gap-3 rounded-md px-4 py-2 text-sm font-medium transition-colors",
                     pathname === item.href
-                      ? "bg-primary text-accent-foreground"
+                      ? "bg-primary text-foreground"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >

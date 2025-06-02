@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import RRWebPlayer from "rrweb-player";
 import "rrweb-player/dist/style.css";
 import type { EventWithScreenshots } from "./types";
+import { useErrorHandler } from "@/lib/handle-error";
 
 interface EventVisualizationProps {
   event: EventWithScreenshots;
@@ -21,6 +22,7 @@ const EventVisualization: React.FC<EventVisualizationProps> = ({
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   const playerRef = useRef<any>(null);
   const [isReady, setIsReady] = useState(false);
+  const { handleError } = useErrorHandler();
 
   // Initialize replayer when dialog opens
   // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
@@ -68,6 +70,7 @@ const EventVisualization: React.FC<EventVisualizationProps> = ({
         };
       } catch (error) {
         console.error("Error creating visualization player:", error);
+        handleError(error as Error, "Failed to create visualization player");
       } finally {
         setIsReady(true);
       }

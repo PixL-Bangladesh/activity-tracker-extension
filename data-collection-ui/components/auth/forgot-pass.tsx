@@ -9,7 +9,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -17,6 +16,8 @@ import {
 } from "../ui/form";
 import { motion } from "framer-motion";
 import { contentVariants } from "@/constants/animate";
+import { createClient } from "@/utils/supabase/client";
+import { toast } from "sonner";
 
 // Define the form schema with Zod
 const forgotPasswordSchema = z.object({
@@ -26,7 +27,14 @@ const forgotPasswordSchema = z.object({
 // Define the form type from the schema
 type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
-const ForgotPassword = ({ setActiveTab }: { setActiveTab: (tab: string) => void }) => {
+const ForgotPassword = ({
+  setActiveTab,
+}: {
+  setActiveTab: (tab: string) => void;
+}) => {
+  const supabase = createClient();
+  const [loading, setLoading] = React.useState(false);
+
   // Initialize the form with default values and the zod resolver
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -36,10 +44,28 @@ const ForgotPassword = ({ setActiveTab }: { setActiveTab: (tab: string) => void 
   });
 
   // Handle form submission
-  function onSubmit(data: ForgotPasswordFormValues) {
-    console.log("Reset password email sent to:", data.email);
-    // In a real app, you would send a reset link to the user's email
-    alert(`Reset link sent to ${data.email}`);
+  async function onSubmit(data: ForgotPasswordFormValues) {
+    setLoading(true);
+    const { email } = data;
+
+    // Call the Supabase function to send the reset email
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      console.error("Error sending reset email:", error);
+      toast.error(
+        `Failed to send reset link: ${error.message || "Unknown error"}`
+      );
+    } else {
+      setLoading(false);
+      console.log("Reset email sent successfully");
+      toast.success(
+        "A reset link has been sent to your email address. Please check your inbox."
+      );
+      setActiveTab("login");
+    }
   }
 
   return (
@@ -58,7 +84,7 @@ const ForgotPassword = ({ setActiveTab }: { setActiveTab: (tab: string) => void 
                 Enter your email address and we'll send you a link to reset your
                 password.
               </p>
-              
+
               <FormField
                 control={form.control}
                 name="email"
@@ -80,12 +106,20 @@ const ForgotPassword = ({ setActiveTab }: { setActiveTab: (tab: string) => void 
                 )}
               />
             </div>
-            
+
             <Button type="submit" className="w-full">
-              Send Reset Link
-              <ArrowRight className="ml-2 h-4 w-4" />
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <span className="loader"></span> Sending...
+                </span>
+              ) : (
+                <span className="flex items-center justify-center">
+                  Send Reset Link
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                </span>
+              )}
             </Button>
-            
+
             <div className="text-center mt-4">
               <button
                 type="button"

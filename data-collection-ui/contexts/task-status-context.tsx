@@ -18,6 +18,7 @@ interface TaskStatusContextType {
   updateTaskStatus: (taskId: string, status: TaskStatus) => Promise<void>;
   resetAllStatuses: () => Promise<void>;
   isLoading: boolean;
+  isResetting?: boolean;
 }
 
 const TaskStatusContext = createContext<TaskStatusContextType | undefined>(
@@ -29,6 +30,7 @@ export function TaskStatusProvider({ children }: { children: ReactNode }) {
     {}
   );
   const [isLoading, setIsLoading] = useState(true);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Fetch task statuses when the component mounts
   useEffect(() => {
@@ -153,6 +155,7 @@ export function TaskStatusProvider({ children }: { children: ReactNode }) {
 
     try {
       // Get the current user
+      setIsResetting(true);
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -165,28 +168,41 @@ export function TaskStatusProvider({ children }: { children: ReactNode }) {
       // Clear local state first
       setTaskStatuses({});
 
-      // Update the user's profile in Supabase
-      const { error } = await supabase
-        .from("user_profiles")
-        .update({
-          task_statuses: {},
-        })
-        .eq("id", user.id);
+      const response = await fetch("/api/tasks/reset", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bucketName: "recordings",
+        }),
+      });
 
-      if (error) {
-        console.error("Error resetting task statuses:", error);
+      const data = await response.json();
+      let _error = response.status !== 200;
+
+      if (_error) {
+        console.error("Error resetting task statuses:", _error);
         toast.error("Failed to reset your progress");
       } else {
         toast.success("All task progress has been reset");
       }
     } catch (error) {
       console.error("Error in resetAllStatuses:", error);
+    } finally {
+      setIsResetting(false);
     }
   };
 
   return (
     <TaskStatusContext.Provider
-      value={{ taskStatuses, updateTaskStatus, resetAllStatuses, isLoading }}
+      value={{
+        taskStatuses,
+        updateTaskStatus,
+        resetAllStatuses,
+        isLoading,
+        isResetting,
+      }}
     >
       {children}
     </TaskStatusContext.Provider>

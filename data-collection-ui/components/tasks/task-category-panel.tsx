@@ -19,13 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  BarChart3,
-  CheckCircle,
-  Clock,
-  ExternalLink,
-  Loader2,
-} from "lucide-react";
+import { Clock, ExternalLink, Loader2 } from "lucide-react";
 import type { TaskCategory, Task } from "@/lib/task-data";
 import { type TaskStatus, useTaskStatus } from "@/contexts/task-status-context";
 import { TaskAlertDialog } from "@/components/tasks/task-alert-dialog";
@@ -40,7 +34,7 @@ export function TaskCategoryPanel({
   category,
   defaultOpen,
 }: TaskCategoryPanelProps) {
-  const { taskStatuses, isLoading } = useTaskStatus();
+  const { taskStatuses, isLoading, updateTaskStatus } = useTaskStatus();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [alertOpen, setAlertOpen] = useState(false);
 
@@ -183,6 +177,8 @@ export function TaskCategoryPanel({
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+
+      {/* Alert dialog for task details */}
       <TaskAlertDialog
         totalInProgressCount={totalInProgressCount}
         task={selectedTask}
@@ -191,6 +187,11 @@ export function TaskCategoryPanel({
         completionStatus={
           selectedTask?.id
             ? taskStatuses[selectedTask.id] === "completed"
+            : false
+        }
+        isInProgress={
+          selectedTask?.id
+            ? taskStatuses[selectedTask.id] === "in-progress"
             : false
         }
       />

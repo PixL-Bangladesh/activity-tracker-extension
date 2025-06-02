@@ -9,20 +9,15 @@ import { TaskCategoryPanel } from "@/components/tasks/task-category-panel";
 import { taskCategories } from "@/lib/task-data";
 import { useTaskStatus } from "@/contexts/task-status-context";
 import { useSearchParams } from "next/navigation";
-import { useRecording } from "@/utils/recordings/useRecording";
-import { deleteSession, getSessionAndEvents } from "@/utils/recordings/storage";
-import { toast } from "sonner";
-import { uploadFileToBucket } from "@/actions/bucket";
-import { createClient } from "@/utils/supabase/client";
 
 export default function TasksPage() {
-  const { resetAllStatuses } = useTaskStatus();
+  const { resetAllStatuses, isResetting } = useTaskStatus();
   const [searchQuery, setSearchQuery] = useState("");
   const [mounted, setMounted] = useState(false);
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category");
-  console.log("categoryParam", categoryParam);
-  const { isRecording, start, stop } = useRecording();
+
+  console.log("TasksPage rendered with category:", categoryParam);
 
   // Ensure we only render after hydration to avoid hydration mismatch
   useEffect(() => {
@@ -41,36 +36,6 @@ export default function TasksPage() {
   if (!mounted) {
     return null; // Prevent hydration mismatch
   }
-
-  const handleStartRecording = async () => {
-    start(`Session-${new Date().toISOString()}`);
-  };
-
-  const handleStopRecording = async () => {
-    try {
-      const result = await stop();
-      if (result) {
-        // Refresh sessions list by adding the new session
-        const inRecordingTaskId = localStorage.getItem("inRecordingTaskId");
-        const sessionBlob = await getSessionAndEvents(result.session.id);
-        const supabase = createClient();
-        const user = (await supabase.auth.getUser()).data.user;
-        const uploadData = await uploadFileToBucket({
-          bucketName: "recordings",
-          filePath: `${user?.email}/${inRecordingTaskId}.json`,
-          file: sessionBlob,
-        });
-        await deleteSession(result.session.id);
-        if (uploadData.error) {
-          throw new Error(uploadData.error.message);
-        }
-        toast.success("Recording stopped and uploaded successfully.");
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      toast.error(`Error stopping recording: ${message}`);
-    }
-  };
 
   return (
     <>
@@ -91,7 +56,7 @@ export default function TasksPage() {
               </div>
               <ThemeToggle />
               <Button variant="outline" size="sm" onClick={resetAllStatuses}>
-                Reset Progress
+                {isResetting ? "Resetting..." : "Reset All Statuses"}
               </Button>
             </div>
           </div>

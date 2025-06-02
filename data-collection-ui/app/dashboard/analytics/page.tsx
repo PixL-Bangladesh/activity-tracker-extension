@@ -22,7 +22,7 @@ import { createClient } from "@/utils/supabase/client";
 import { downloadFileFromBucket } from "@/actions/bucket";
 import { toast } from "sonner";
 import type { TaskEventBucketType } from "@/types/tasks";
-import { printIfDev } from "@/utils/development/debug";
+import { useErrorHandler } from "@/lib/handle-error";
 
 // Import utilities
 
@@ -36,6 +36,7 @@ const Analytics: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
+  const { handleError } = useErrorHandler();
 
   // Data structures for analytics
   const [networkData, setNetworkData] = useState<EventWithScreenshots[]>([]);
@@ -104,11 +105,7 @@ const Analytics: React.FC = () => {
         }
       }
     } catch (error) {
-      const _error =
-        error instanceof Error ? error : new Error("Unknown error");
-      toast.error("An error occured while fetching the data from the bucket", {
-        description: _error.message,
-      });
+      handleError(error as Error, "Failed to fetch recording data");
       setError("Failed to fetch recording data. Please try again.");
     } finally {
       setLoading(false);
@@ -141,6 +138,7 @@ const Analytics: React.FC = () => {
         processInteractionEvents();
       } catch (error) {
         console.error("Error initializing replayer:", error);
+        handleError(error as Error, "Failed to initialize replayer");
       }
     }
 
@@ -190,6 +188,7 @@ const Analytics: React.FC = () => {
       setNetworkData(processedNetworkData);
     } catch (error) {
       console.error("Error processing interaction events:", error);
+      handleError(error as Error, "Failed to process interaction events");
     }
   };
 

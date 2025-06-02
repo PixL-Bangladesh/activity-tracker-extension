@@ -19,6 +19,7 @@ import { motion } from "framer-motion";
 import { contentVariants } from "@/constants/animate";
 import { signup } from "@/actions/auth";
 import { toast } from "sonner";
+import { useErrorHandler } from "@/lib/handle-error";
 
 // Define the form schema with Zod
 const registerFormSchema = z
@@ -27,10 +28,17 @@ const registerFormSchema = z
       .string()
       .min(2, { message: "Name must be at least 2 characters long" }),
     email: z.string().email({ message: "Please enter a valid email address" }),
-    password: z.string().min(8, {
-      message: "Password must be at least 8 characters long",
-    }),
-    confirmPassword: z.string(),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+      .regex(/\d/, "Password must contain at least one number")
+      .regex(
+        /[!@#$%^&*(),.?":{}|<>]/,
+        "Password must contain at least one special character"
+      ),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -44,6 +52,7 @@ const RegisterForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { handleError } = useErrorHandler();
 
   // Initialize the form with default values and the zod resolver
   const form = useForm<RegisterFormValues>({
@@ -66,11 +75,7 @@ const RegisterForm = () => {
         fullName: data.name,
       });
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "An error occurred";
-      toast.error(message, {
-        description: "Please try again.",
-      });
+      handleError(error as Error, "Registration failed");
     } finally {
       setLoading(false);
     }

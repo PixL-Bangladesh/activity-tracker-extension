@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Browser from "webextension-polyfill";
-import { ListIcon, Pause, Play, Loader2 } from "lucide-react";
+import { ListIcon, Pause, Play, Loader2, RefreshCw } from "lucide-react";
 import Channel from "~/utils/channel";
 import { LocalDataKey, RecorderStatus, EventName } from "~/types";
 import type { LocalData, Session } from "~/types";
@@ -26,9 +26,26 @@ export function App() {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { requestAuthStatus, onAuthStatusChange, refreshAuthStatus } =
     useAuthChannel();
+
+  const handleAuthStatusUpdate = (authData: AuthStatus) => {
+    console.log("Popup: Handling auth status update:", authData);
+    setIsAuthenticated(authData.isAuthenticated);
+    setTaskId(authData.taskId);
+
+    if (!authData.isAuthenticated) {
+      setStatus(RecorderStatus.IDLE);
+      setStartTime(0);
+      setNewSession(null);
+      setErrorMessage("Not authenticated");
+    } else {
+      // Clear error message when authenticated
+      setErrorMessage("");
+    }
+  };
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -46,23 +63,6 @@ export function App() {
       }
     };
 
-    const handleAuthStatusUpdate = (authData: AuthStatus) => {
-      console.log("Popup: Handling auth status update:", authData);
-      setIsAuthenticated(authData.isAuthenticated);
-      setTaskId(authData.taskId);
-
-      if (!authData.isAuthenticated) {
-        setStatus(RecorderStatus.IDLE);
-        setStartTime(0);
-        setNewSession(null);
-        setErrorMessage("Not authenticated");
-      } else {
-        // Clear error message when authenticated
-        setErrorMessage("");
-      }
-    };
-
-    // Listen for auth status changes
     // Listen for auth status changes
     const removeAuthListener = onAuthStatusChange(handleAuthStatusUpdate);
 
@@ -211,6 +211,26 @@ export function App() {
     }
   };
 
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      console.log("Manual refresh triggered");
+      toast.info("Refreshing auth status...");
+
+      // Force refresh auth status
+      const updatedAuth = await refreshAuthStatus();
+      handleAuthStatusUpdate(updatedAuth);
+
+      toast.success("Auth status refreshed");
+      console.log("Manual refresh completed:", updatedAuth);
+    } catch (error) {
+      console.error("Error during manual refresh:", error);
+      toast.error("Failed to refresh auth status");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Show loading indicator while authenticating
   if (isLoadingAuth) {
     return (
@@ -228,18 +248,36 @@ export function App() {
         <div className="flex-1" />
         <div className="flex flex-row space-x-2">
           {isAuthenticated && (
-            <Button
-              onClick={() => {
-                window.open(`${config.SITE_URL}/dashboard/tasks`, "_blank");
-              }}
-              size="sm"
-              variant="ghost"
-              className="h-8 w-8 p-0"
-              title="Session List"
-            >
-              <ListIcon className="h-4 w-4" />
-              <span className="sr-only">Session List</span>
-            </Button>
+            <>
+              <Button
+                onClick={() => {
+                  window.open(`${config.SITE_URL}/dashboard/tasks`, "_blank");
+                }}
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                title="Session List"
+              >
+                <ListIcon className="h-4 w-4" />
+                <span className="sr-only">Session List</span>
+              </Button>
+
+              <Button
+                onClick={handleManualRefresh}
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                title="Refresh Auth Status"
+                disabled={isRefreshing}
+              >
+                {isRefreshing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                <span className="sr-only">Refresh Auth Status</span>
+              </Button>
+            </>
           )}
         </div>
       </div>

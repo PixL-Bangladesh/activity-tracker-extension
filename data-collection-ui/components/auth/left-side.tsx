@@ -4,7 +4,7 @@ import React from "react";
 
 const LeftSideLogin = () => {
   return (
-    <div className="hidden lg:flex lg:w-1/2 bg-popover items-center justify-center p-12 relative overflow-hidden">
+    <div className="hidden lg:flex lg:w-1/2 bg-sidebar items-center justify-center p-12 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-background to-background/5" />
       <div className="relative z-10 max-w-md">
         <h1 className="text-4xl font-bold mb-6 text-foreground">ScreenTrail</h1>

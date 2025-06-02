@@ -1,26 +1,48 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { Download, ExternalLink } from "lucide-react";
+import { FaChrome as Chrome, FaFirefox as Firefox } from "react-icons/fa";
 
 export default function WelcomePage() {
   const router = useRouter();
   const { setTheme } = useTheme();
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   // Set default theme to dark on initial load
   useEffect(() => {
     setTheme("system");
   }, [setTheme]);
 
-  const handleDownloadExtension = () => {
-    window.open(
-      "https://drive.google.com/file/d/1sWt-Q3kFScbWK41uf08ydV2iKU6JimOA/view?usp=drive_link",
-      "_blank"
-    );
+  const downloadLinks = {
+    chrome: {
+      crx: "https://drive.google.com/file/d/1F-NRlVNXqi2KpX3ZC9ofzP48l0ZamKox/view?usp=sharing",
+      zip: "https://drive.google.com/file/d/18YE2t-o9Zdjxd2ZLg62pTojSEFQ7Xf-6/view?usp=sharing",
+    },
+    firefox: {
+      crx: "https://drive.google.com/file/d/11waEZnw6jJlv_qwMgiexuCwFwz2UY8l_/view?usp=sharing",
+      zip: "https://drive.google.com/file/d/1RMdeJHhGhzJITNFpUNMf05UB2KtoZyld/view?usp=sharing",
+    },
+  };
+
+  const handleDownload = (
+    browser: "chrome" | "firefox",
+    format: "crx" | "zip"
+  ) => {
+    window.open(downloadLinks[browser][format], "_blank");
+    setDialogOpen(false);
   };
 
   return (
@@ -79,16 +101,94 @@ export default function WelcomePage() {
             </div>
 
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button
-                onClick={handleDownloadExtension}
-                variant="outline"
-                size="sm"
-                className="group border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all duration-200"
-              >
-                <Download className="w-4 h-4 mr-2 group-hover:animate-bounce" />
-                Download Extension
-                <ExternalLink className="w-3 h-3 ml-2 opacity-60 group-hover:opacity-100 transition-opacity" />
-              </Button>
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="group border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all duration-200"
+                  >
+                    <Download className="w-4 h-4 mr-2 group-hover:animate-bounce" />
+                    Download Extension
+                    <ExternalLink className="w-3 h-3 ml-2 opacity-60 group-hover:opacity-100 transition-opacity" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Download Browser Extension</DialogTitle>
+                    <DialogDescription>
+                      Choose your browser and preferred format. CRX files work
+                      on Windows/Linux, ZIP files work on all platforms
+                      including Mac.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid grid-cols-1 gap-4 py-4">
+                    {/* Chrome Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <Chrome className="w-4 h-4 text-blue-500" />
+                        Chrome
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          onClick={() => handleDownload("chrome", "crx")}
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          CRX
+                        </Button>
+                        <Button
+                          onClick={() => handleDownload("chrome", "zip")}
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          ZIP
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Firefox Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <Firefox className="w-4 h-4 text-orange-500" />
+                        Firefox
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          onClick={() => handleDownload("firefox", "crx")}
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          CRX
+                        </Button>
+                        <Button
+                          onClick={() => handleDownload("firefox", "zip")}
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          ZIP
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    <p className="mb-1">
+                      • CRX: Direct installation (Windows/Linux)
+                    </p>
+                    <p>
+                      • ZIP: Manual installation (All platforms, including Mac)
+                    </p>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </motion.div>
           </motion.div>
         </div>
@@ -99,7 +199,7 @@ export default function WelcomePage() {
           transition={{ duration: 0.8, delay: 0.6 }}
           className="mt-8 text-xs text-muted-foreground/60"
         >
-          Compatible with Chrome & Edge browsers
+          Compatible with Chrome & Firefox browsers
         </motion.div>
       </motion.div>
     </div>

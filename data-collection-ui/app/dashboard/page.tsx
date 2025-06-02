@@ -14,15 +14,18 @@ import {
   ArrowRight,
   FileWarning,
   Loader2,
+  ListTodo,
+  Target,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
 export default function Dashboard() {
-  const { taskStatuses, resetAllStatuses, isLoading } = useTaskStatus();
+  const { taskStatuses, resetAllStatuses, isLoading, isResetting } =
+    useTaskStatus();
   const [mounted, setMounted] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
   const supbase = createClient();
   const [user, setUser] = useState<User | null>(null);
 
@@ -80,19 +83,12 @@ export default function Dashboard() {
     };
   });
 
-  const handleResetProgress = async () => {
-    setIsResetting(true);
-    await resetAllStatuses();
-    setIsResetting(false);
-  };
-
   if (!mounted) {
     return null; // Prevent hydration mismatch
   }
 
   return (
     <>
-      <Sidebar />
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-background">
         <header className="border-b border-border/40 bg-card backdrop-blur supports-[backdrop-filter]:bg-card/60">
           <div className="flex h-14 items-center px-4 lg:px-8">
@@ -102,7 +98,7 @@ export default function Dashboard() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleResetProgress}
+                onClick={resetAllStatuses}
                 disabled={isLoading || isResetting}
               >
                 {isResetting ? (
@@ -130,7 +126,7 @@ export default function Dashboard() {
           )}
           <Alert className="mb-6 bg-warning">
             <FileWarning className="h-4 w-4" color="red" />
-            <AlertDescription className="text-background font-bold">
+            <AlertDescription className="text-foreground font-bold">
               Your progress is now stored in your account. Sign in on any device
               to access your data.
             </AlertDescription>
@@ -145,53 +141,57 @@ export default function Dashboard() {
             <>
               {/* Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <Card className="bg-chart-1">
+                <Card className="hover:border-chart-1">
                   <CardHeader className="pb-0">
-                    <CardTitle className="text-sm font-medium text-foreground">
+                    <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
                       Total Tasks
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex items-center justify-between">
                     <div className="text-3xl font-bold">{totalTasks}</div>
+                    <ListTodo className="h-10 w-10 text-chart-1" />
                   </CardContent>
                 </Card>
 
-                <Card className="bg-chart-2">
+                <Card className="hover:border-chart-2">
                   <CardHeader className="pb-0">
-                    <CardTitle className="text-sm font-medium text-foreground">
+                    <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
                       Completed
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex items-center justify-between">
                     <div className="text-3xl font-bold text-foreground">
                       {completedTasks}
                     </div>
+                    <CheckCircle className="h-10 w-10 text-chart-2" />
                   </CardContent>
                 </Card>
 
-                <Card className="bg-chart-3">
+                <Card className="hover:border-chart-3">
                   <CardHeader className="pb-0">
-                    <CardTitle className="text-sm font-medium text-foreground">
+                    <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
                       In Progress
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex items-center justify-between">
                     <div className="text-3xl font-bold text-foreground">
                       {inProgressTasks}
                     </div>
+                    <Clock className="h-10 w-10 text-chart-3" />
                   </CardContent>
                 </Card>
 
-                <Card className="bg-chart-4">
+                <Card className="hover:border-chart-4">
                   <CardHeader className="pb-0">
-                    <CardTitle className="text-sm font-medium text-foreground">
+                    <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
                       Completion Rate
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex items-center justify-between">
                     <div className="text-3xl font-bold">
                       {completionPercentage}%
                     </div>
+                    <Target className="h-10 w-10 text-chart-4" />
                   </CardContent>
                 </Card>
               </div>
@@ -204,10 +204,10 @@ export default function Dashboard() {
                     key={category.id}
                     className={
                       category.percentage === 100
-                        ? "border-green-500/30 bg-green-500/10"
+                        ? "border-green-500/30"
                         : category.percentage >= 50
                         ? "border-warning/50 bg-warning/20"
-                        : "border-destructive/10 bg-destructive/10"
+                        : "border-destructive/20"
                     }
                   >
                     <CardHeader className="pb-2">
