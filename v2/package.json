@@ -18,6 +18,7 @@
     "prepublish": "yarn build"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.0.0",
     "@rrweb/types": "^2.0.0-alpha.18",
     "@types/chrome": "^0.0.287",
     "@types/node": "^20.11.5",
